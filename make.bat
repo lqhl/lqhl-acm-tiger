@@ -1,0 +1,1 @@
+javac -sourcepath src -classpath lib/java-cup-11a-runtime.jar -d bin src/tiger/*.java
