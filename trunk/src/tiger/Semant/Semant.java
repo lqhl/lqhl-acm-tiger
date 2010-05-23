@@ -1,18 +1,28 @@
 package tiger.Semant;
 
+import tiger.Absyn.FieldList;
+import tiger.Frame.Frame;
+import tiger.Temp.Label;
 import tiger.Translate.*;
 import tiger.Types.*;
+import tiger.Util.BoolList;
+
 import java.util.*;
 
 public class Semant {
 	Env env;
+	Translate translate;
+	Level level;
+
 	static Type INT = new INT();
 	static Type STRING = new STRING();
 	static Type VOID = new VOID();
 	static Type NIL = new NIL();
 
-	public Semant() {
-		env = new Env();
+	public Semant(Frame frame) {
+		translate = new Translate(frame);
+		level = new Level(translate.frame);
+		env = new Env(level);
 	}
 
 	List<String> errorList = new ArrayList <String> ();
@@ -48,7 +58,15 @@ public class Semant {
 		System.err.println(message);
 		System.exit(1);
 	}
-
+	
+	public Frag transProg(tiger.Absyn.Exp e) {
+		level = new Level(level, tiger.Symbol.Symbol.symbol("main"), null);
+		ExpTy et = transExp(e);
+		translate.procEntryExit(level, et.exp, false);
+		level = level.parent;
+		return translate.getResult();
+	}
+	
 	Exp checkInt(ExpTy e, int line, int colume) {
 		if (!e.ty.coerceTo(INT)) {
 			report_error(line, colume, "Integer required");
@@ -77,8 +95,10 @@ public class Semant {
 
 	ExpTy transVar(tiger.Absyn.SimpleVar e) {
 		Entry t = (Entry) env.vEnv.get(e.name);
-		if (t instanceof VarEntry)
-			return new ExpTy(null, ((VarEntry) t).ty);
+		if (t instanceof VarEntry) {
+			VarEntry p = (VarEntry)t;
+			return new ExpTy(translate.transSimpleVar(p.access, level), ((VarEntry) t).ty);
+		}
 		else {
 			report_error(e.line, e.colume, "Undefined variable " + e.name.toString());
 			return new ExpTy(null, INT);
@@ -90,7 +110,7 @@ public class Semant {
 		ExpTy index = transExp(e.index);
 		if (base.ty instanceof ARRAY) {
 			checkInt(index, e.index.line, e.index.colume);
-			return new ExpTy(null, ((ARRAY)base.ty).element.actual());
+			return new ExpTy(translate.transSubscriptVar(base.exp, index.exp), ((ARRAY)base.ty).element.actual());
 		}
 		else {
 			report_error(e.line, e.colume, "Array type required");
@@ -100,9 +120,10 @@ public class Semant {
 
 	ExpTy transVar(tiger.Absyn.FieldVar e) {
 		ExpTy l = transVar(e.var);
+		int offset = 0;
 		if (l.ty instanceof RECORD) {
 			RECORD rec;
-			for (rec = (RECORD)l.ty; rec != null; rec = rec.tail)
+			for (rec = (RECORD)l.ty; rec != null; rec = rec.tail, offset++)
 				if (rec.fieldName == e.field)
 					break;
 			if (rec == null) {
@@ -110,7 +131,7 @@ public class Semant {
 				return new ExpTy(null, INT);
 			}
 			else
-				return new ExpTy(null, rec.fieldType.actual());
+				return new ExpTy(translate.transFieldVar(l.exp, offset), rec.fieldType.actual());
 		}
 		else {
 			report_error(e.line, e.colume, "Record type required");
@@ -172,7 +193,7 @@ public class Semant {
 		ExpTy eInit = transExp(e.init);
 		checkAssign(((ARRAY)eType).element.actual(), eInit.ty, e.line, e.colume);
 		
-		return new ExpTy(null, eType);
+		return new ExpTy(translate.transArrayExp(level, eInit.exp, arraySize.exp), eType);
 	}
 
 	ExpTy transExp(tiger.Absyn.AssignExp e) {
@@ -181,13 +202,15 @@ public class Semant {
 		if (e.var instanceof tiger.Absyn.SimpleVar && env.vEnv.get(((tiger.Absyn.SimpleVar)e.var).name) instanceof ForVarEntry)
 			report_error(e.line, e.colume, "Loop value should not be assigned");
 		checkAssign(eLvalue.ty, eExp.ty, e.line, e.colume);
-		return new ExpTy(null, VOID);
+		return new ExpTy(translate.transAssignExp(eLvalue.exp, eExp.exp), VOID);
 	}
 
 	ExpTy transExp(tiger.Absyn.BreakExp e) {
-		if (!env.loopEnv.canBreak())
+		if (!env.loopEnv.inLoop()) {
 			report_error(e.line, e.colume, "Illegal break");
-		return new ExpTy(null, VOID);
+			return null;
+		}
+		return new ExpTy(translate.transBreak(env.loopEnv.done()), VOID);
 	}
 
 	ExpTy transExp(tiger.Absyn.CallExp e) {
@@ -199,6 +222,7 @@ public class Semant {
 		tiger.Absyn.ExpList eArgument = e.args;
 		RECORD eFormals = ((FunEntry)eFunc).formals;
 		ExpTy tmp = null;
+		ArrayList <Exp> argValue = new ArrayList <Exp> ();
 		for (; eArgument != null; eArgument = eArgument.tail, eFormals = eFormals.tail) {
 			if (eFormals == null) {
 				report_error(e.line, e.colume, "Function " + e.func.toString() + " has too many arguments");
@@ -206,10 +230,11 @@ public class Semant {
 			}
 			tmp = transExp(eArgument.head);
 			checkAssign(eFormals.fieldType.actual(), tmp.ty, eArgument.head.line, eArgument.head.colume);
+			argValue.add(tmp.exp);
 		}
 		if (eFormals != null)
 			report_error(e.line, e.colume, "Function " + e.func.toString() + "'s arguments are lesser then expected");
-		return new ExpTy(null, ((FunEntry)eFunc).result.actual());
+		return new ExpTy(translate.transCallExp(level, ((FunEntry)eFunc).level, ((FunEntry)eFunc).label, argValue), ((FunEntry)eFunc).result.actual());
 	}
 
 	ExpTy transExp(tiger.Absyn.ForExp e) {
@@ -217,16 +242,18 @@ public class Semant {
 		ExpTy dInit = transExp(e.var.init);
 		if (dInit.ty != INT)
 			report_error(e.var.line, e.var.colume, "Loop variable should be integer");
-		env.vEnv.put(e.var.name, new ForVarEntry(dInit.ty));
+		Access access = level.allocLocal(e.var.escape);
+		env.vEnv.put(e.var.name, new ForVarEntry(access, dInit.ty));
 		ExpTy hi = transExp(e.hi);
 		checkInt(hi, e.hi.line, e.hi.colume);
-		env.loopEnv.add();
+		env.loopEnv.newLoop();
 		ExpTy body = transExp(e.body);
 		if (!body.ty.coerceTo(VOID))
 			report_error(e.body.line, e.body.colume, "For expression should return void");
+		Exp forExp = translate.transForExp(level, access, dInit.exp, hi.exp, body.exp, env.loopEnv.done());
+		env.loopEnv.exitLoop();
 		env.vEnv.endScope();
-		env.loopEnv.pop();
-		return new ExpTy(null, VOID);
+		return new ExpTy(forExp, VOID);
 	}
 
 	Type checkIfType(ExpTy et1, ExpTy et2, int line, int colume) {
@@ -256,14 +283,14 @@ public class Semant {
 
 		if (eElse != null) {
 			if ((temp = checkIfType(eThen, eElse, e.elseclause.line, e.elseclause.colume)) != null)
-				return new ExpTy(null, temp);
+				return new ExpTy(translate.transIfThenElseExp(eTest.exp, eThen.exp, eElse.exp), temp);
 			else {
 				report_error(e.elseclause.line, e.elseclause.colume, "if-then-else should of same type");
 				return new ExpTy(null, VOID);
 			}
 		} else {
 			if (eThen.ty.coerceTo(VOID))
-				return new ExpTy(null, VOID);
+				return new ExpTy(translate.transIfThenElseExp(eTest.exp, eThen.exp, null), VOID);
 			else {
 				report_error(e.thenclause.line, e.thenclause.colume, "when no else, then clause must return void");
 				return new ExpTy(null, VOID);
@@ -272,23 +299,27 @@ public class Semant {
 	}
 	
 	ExpTy transExp(tiger.Absyn.IntExp e) {
-		return new ExpTy(null, INT);
+		return new ExpTy(translate.transIntExp(e.value), INT);
 	}
 	
 	ExpTy transExp(tiger.Absyn.LetExp e) {
 		env.vEnv.beginScope();
 		env.tEnv.beginScope();
+		ExpList eDec = null, p = null;
 		for (tiger.Absyn.DecList ptr = e.decs; ptr != null; ptr = ptr.tail) {
-			transDec(ptr.head);
+			if (eDec == null)
+				p = eDec = new ExpList(transDec(ptr.head), null);
+			else
+				p = p.tail = new ExpList(transDec(ptr.head), null);
 		}
 		ExpTy eBody = transExp(e.body);
 		env.vEnv.endScope();
 		env.tEnv.endScope();
-		return new ExpTy(null, eBody.ty);
+		return new ExpTy(translate.transLetExp(eDec, eBody.exp, eBody.ty.coerceTo(VOID)), eBody.ty);
 	}
 
 	ExpTy transExp(tiger.Absyn.NilExp e) {
-		return new ExpTy(null, NIL);
+		return new ExpTy(translate.transNilExp(), NIL);
 	}
 	
 
@@ -322,14 +353,20 @@ public class Semant {
 				|| e.oper == tiger.Absyn.OpExp.MUL || e.oper == tiger.Absyn.OpExp.DIV) {
 			checkInt(eLeft, e.left.line, e.left.colume);
 			checkInt(eRight, e.right.line, e.right.colume);
-			return new ExpTy(null, INT);
+			return new ExpTy(translate.transCalcExp(e.oper, eLeft.exp, eRight.exp), INT);
 		} else if (e.oper == tiger.Absyn.OpExp.EQ || e.oper == tiger.Absyn.OpExp.NE){
-			checkEqualType(eLeft, eRight, e.line, e.colume);
-			return new ExpTy(null, INT);
+			Type ty = checkEqualType(eLeft, eRight, e.line, e.colume);
+			if (ty.coerceTo(STRING))
+				return new ExpTy(translate.transStringRelExp(e.oper, eLeft.exp, eRight.exp), INT);
+			else
+				return new ExpTy(translate.transOtherRelExp(e.oper, eLeft.exp, eRight.exp), INT);
 		}
 		else {
-			checkCmpType(eLeft, eRight, e.line, e.colume);
-			return new ExpTy(null, INT);
+			Type ty = checkCmpType(eLeft, eRight, e.line, e.colume);
+			if (ty.coerceTo(STRING))
+				return new ExpTy(translate.transStringRelExp(e.oper, eLeft.exp, eRight.exp), INT);
+			else
+				return new ExpTy(translate.transOtherRelExp(e.oper, eLeft.exp, eRight.exp), INT);
 		}
 	}
 	
@@ -351,6 +388,7 @@ public class Semant {
 		RECORD eRecord = (RECORD)eType;
 		ExpTy et;
 
+		ArrayList <Exp> fieldList = new ArrayList<Exp> ();
 		for (; eFields != null; eFields = eFields.tail, eRecord = eRecord.tail) {
 			if (eRecord == null) {
 				report_error(eFields.line, eFields.colume,
@@ -363,44 +401,51 @@ public class Semant {
 				break;
 			}
 			et = transExp(eFields.init);
+			fieldList.add(et.exp);
 			checkAssign(eRecord.fieldType.actual(), et.ty, eFields.line, eFields.colume);
 		}
 
 		if (eRecord != null)
 			report_error(eFields.line, eFields.colume, "Missing record fields");
-		return new ExpTy(null, eType);
+		return new ExpTy(translate.transRecordExp(level, fieldList), eType);
 	}
 	
 	ExpTy transExp(tiger.Absyn.SeqExp e) {
 		Type type = VOID;
 		ExpTy et;
+		ExpList el = null, ptr = null;
 		for (tiger.Absyn.ExpList h = e.list; h != null; h = h.tail) {
 			et = transExp(h.head);
 			type = et.ty;
+			if (el == null)
+				el = ptr = new ExpList(et.exp, null);
+			else
+				ptr = ptr.tail = new ExpList(et.exp, null);
 		}
-		return new ExpTy(null, type);
+		return new ExpTy(translate.transSeqExp(el, type.coerceTo(VOID)), type);
 
 	}
 	
 	ExpTy transExp(tiger.Absyn.StringExp e) {
-		return new ExpTy(null, STRING);
+		return new ExpTy(translate.transStringExp(e.value), STRING);
 	}
 	
 
 	ExpTy transExp(tiger.Absyn.VarExp e) {
-		 return new ExpTy(null, transVar(e.var).ty);
+		return transVar(e.var);
 	}
 	
 
 	ExpTy transExp(tiger.Absyn.WhileExp e) {
 		ExpTy eTest = transExp(e.test);
 		checkInt(eTest, e.test.line, e.test.colume);
-		env.loopEnv.add();
+		env.loopEnv.newLoop();
 		ExpTy body = transExp(e.body);
-		env.loopEnv.pop();
 		if (body.ty != VOID)
 			report_error(e.body.line, e.body.colume, "While expression should return void");
-		return new ExpTy(null, VOID);
+		Exp eWhile = translate.transWhileExp(eTest.exp, body.exp, env.loopEnv.done());
+		env.loopEnv.exitLoop();
+		return new ExpTy(eWhile, VOID);
 	}
 	
 	Exp transDec(tiger.Absyn.Dec d) {
@@ -416,19 +461,20 @@ public class Semant {
 	
 	Exp transDec(tiger.Absyn.VarDec d) {
 		ExpTy dInit = transExp(d.init);
-		if (d.typ == null) {
+		Type ty = null;
+		if (d.typ == null)
 			if (dInit.ty == NIL) {
 				report_error(d.init.line, d.init.colume, "Illegal varible initialization");
 				return null;
-			} else {
-				env.vEnv.put(d.name, new VarEntry(dInit.ty));
-			}
-		} else {
-			Type t = transTy(d.typ).actual();
-			checkAssign(t, dInit.ty, d.init.line, d.init.colume);
-			env.vEnv.put(d.name, new VarEntry(t));
+			} else
+				ty =  dInit.ty;
+		else {
+			ty = transTy(d.typ).actual();
+			checkAssign(ty, dInit.ty, d.init.line, d.init.colume);
 		}
-		return null;
+		Access access = level.allocLocal(d.escape);
+		env.vEnv.put(d.name, new VarEntry(access, ty));
+		return translate.transAssignExp(translate.transSimpleVar(access, level), dInit.exp);
 	}
 	
 	Exp transDec(tiger.Absyn.TypeDec d) {
@@ -445,39 +491,57 @@ public class Semant {
 		for (tiger.Absyn.TypeDec it = d; it != null; it = it.next)
 			if (((NAME)env.tEnv.get(it.name)).isLoop())
 				report_error(it.line, it.colume, "This is a loop type declaration");
-		return null;
+		return translate.transNoOp();
 	}
 	
 	Exp transDec(tiger.Absyn.FunctionDec d) {
 		List<tiger.Symbol.Symbol> list = new ArrayList <tiger.Symbol.Symbol> ();
 		for (tiger.Absyn.FunctionDec it = d; it != null; it = it.next)
-			if (list.contains(it.name))
+			if (env.vEnv.get(it.name) != null && env.vEnv.get(it.name) instanceof SysFunEntry)
+				report_error(it.line, it.colume, "This funtion has been defined in standard library");
+			else if (list.contains(it.name))
 				report_error(it.line, it.colume, "This funtion has been defined in this function declaration sequence");
 			else {
 				list.add(it.name);
 				Type result = (it.result == null) ? VOID : transTy(it.result).actual();
-				env.vEnv.put(it.name, new FunEntry(transTypeFields(it.params), result));
+				Label label = new Label(it.name);
+				Level new_level = new Level(level, it.name, makeBoolList(it.params));
+				env.vEnv.put(it.name, new FunEntry(new_level, label, transTypeFields(it.params), result));
 			}
 		for (tiger.Absyn.FunctionDec it = d; it != null; it = it.next) {
 			FunEntry f = (FunEntry)env.vEnv.get(it.name);
 			env.vEnv.beginScope();
-			for (tiger.Absyn.FieldList p = it.params; p != null; p = p.tail) {
+			env.loopEnv.beginScope();
+			Level pLevel = level;
+			level = f.level;
+			AccessList al = level.formals.tail;
+			for (tiger.Absyn.FieldList p = it.params; p != null; p = p.tail, al = al.tail) {
 				Type ty = (Type)env.tEnv.get(p.typ);
 				if (ty == null) {
 					report_error(p.line, p.colume, "Undefined type" + p.typ.toString());
 					env.vEnv.endScope();
 					return null;
 				}
-				else
-					env.vEnv.put(p.name, new VarEntry(ty.actual()));
+				else {
+					Access acc = new Access(level, al.head.access);
+					env.vEnv.put(p.name, new VarEntry(acc, ty.actual()));
+				}
 			}
-			env.loopEnv.beginScope();
 			ExpTy et = transExp(it.body);
+			translate.procEntryExit(level, et.exp, et.ty != VOID);
 			env.loopEnv.endScope();
 			env.vEnv.endScope();
+			level = pLevel;
 			checkAssign(f.result.actual(), et.ty, it.body.line, it.body.colume);
 		}
-		return null;
+		return translate.transNoOp();
+	}
+
+	private BoolList makeBoolList(FieldList params) {
+		if (params == null)
+			return null;
+		else
+			return new BoolList(params.escape, makeBoolList(params.tail));
 	}
 
 	RECORD transTypeFields(tiger.Absyn.FieldList p) {

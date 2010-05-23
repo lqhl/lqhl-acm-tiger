@@ -1,12 +1,17 @@
 package tiger.Semant;
+
 import tiger.Symbol.*;
-import java.util.*;
+import tiger.Temp.*;
+import tiger.Translate.*;
+import tiger.Util.BoolList;
 
 public class Env {
 	Table vEnv;
 	Table tEnv;
 	LoopEnv loopEnv;
-	public Env() {
+	Level root = null;
+	public Env(Level r) {
+		root = r;
 		loopEnv = new LoopEnv();
 		tiger.Symbol.Symbol s;
 
@@ -17,41 +22,63 @@ public class Env {
 		tEnv.put(sym("string"), new tiger.Types.STRING());
 
 		s = sym("print");
-		vEnv.put(s, new FunEntry(new tiger.Types.RECORD(sym("s"), (tiger.Types.STRING)tEnv.get(sym("string")), null), Semant.VOID));
+		Level level = new Level(root, s, new BoolList(true, null));
+		Label label = new Label(s);
+		vEnv.put(s, new SysFunEntry(level, label, new tiger.Types.RECORD(sym("s"), (tiger.Types.STRING)tEnv.get(sym("string")), null), Semant.VOID));
 
 		s = sym("printi");
-		vEnv.put(s, new FunEntry(new tiger.Types.RECORD(sym("i"), (tiger.Types.INT)tEnv.get(sym("int")), null), Semant.VOID));
+		level = new Level(root, s, new BoolList(true, null));
+		label = new Label(s);
+		vEnv.put(s, new SysFunEntry(level, label, new tiger.Types.RECORD(sym("i"), (tiger.Types.INT)tEnv.get(sym("int")), null), Semant.VOID));
 
 		s = sym("flush");
-		vEnv.put(s, new FunEntry(null, Semant.VOID));
+		level = new Level(root, s, new BoolList(true, null));
+		label = new Label(s);
+		vEnv.put(s, new SysFunEntry(level, label, null, Semant.VOID));
 
 		s = sym("getchar");
-		vEnv.put(s, new FunEntry(null, Semant.STRING));
+		level = new Level(root, s, new BoolList(true, null));
+		label = new Label(s);
+		vEnv.put(s, new SysFunEntry(level, label, null, Semant.STRING));
 
 		s = sym("ord");
-		vEnv.put(s, new FunEntry(new tiger.Types.RECORD(sym("s"), (tiger.Types.STRING)tEnv.get(sym("string")), null), Semant.INT));
+		level = new Level(root, s, new BoolList(true, null));
+		label = new Label(s);
+		vEnv.put(s, new SysFunEntry(level, label, new tiger.Types.RECORD(sym("s"), (tiger.Types.STRING)tEnv.get(sym("string")), null), Semant.INT));
 
 		s = sym("chr");
-		vEnv.put(s, new FunEntry( new tiger.Types.RECORD(sym("i"), (tiger.Types.INT)tEnv.get(sym("int")), null), Semant.STRING));
+		level = new Level(root, s, new BoolList(true, null));
+		label = new Label(s);
+		vEnv.put(s, new SysFunEntry( level, label, new tiger.Types.RECORD(sym("i"), (tiger.Types.INT)tEnv.get(sym("int")), null), Semant.STRING));
 
 		s = sym("size");
-		vEnv.put(s, new FunEntry(new tiger.Types.RECORD(sym("s"), (tiger.Types.STRING)tEnv.get(sym("string")), null), Semant.INT));
+		level = new Level(root, s, new BoolList(true, null));
+		label = new Label(s);
+		vEnv.put(s, new SysFunEntry(level, label, new tiger.Types.RECORD(sym("s"), (tiger.Types.STRING)tEnv.get(sym("string")), null), Semant.INT));
 
 		s = sym("substring");
-		vEnv.put(s, new FunEntry(new tiger.Types.RECORD(sym("s"), (tiger.Types.STRING)tEnv.get(sym("string")),
+		level = new Level(root, s, new BoolList(true, null));
+		label = new Label(s);
+		vEnv.put(s, new SysFunEntry(level, label, new tiger.Types.RECORD(sym("s"), (tiger.Types.STRING)tEnv.get(sym("string")),
 				new tiger.Types.RECORD(sym("f"), Semant.INT, 
 				new tiger.Types.RECORD(sym("n"), Semant.INT, null))), Semant.STRING));
 
 		s = sym("concat");
-		vEnv.put(s, new FunEntry(new tiger.Types.RECORD(sym("s1"), (tiger.Types.STRING)tEnv.get(sym("string")),
+		level = new Level(root, s, new BoolList(true, null));
+		label = new Label(s);
+		vEnv.put(s, new SysFunEntry(level, label, new tiger.Types.RECORD(sym("s1"), (tiger.Types.STRING)tEnv.get(sym("string")),
 				new tiger.Types.RECORD(sym("s2"), (tiger.Types.STRING)tEnv.get(sym("string")), null)),
 				Semant.STRING));
 
 		s = sym("not");
-		vEnv.put(s, new FunEntry(new tiger.Types.RECORD(sym("i"), (tiger.Types.INT)tEnv.get(sym("int")), null), Semant.INT));
+		level = new Level(root, s, new BoolList(true, null));
+		label = new Label(s);
+		vEnv.put(s, new SysFunEntry(level, label, new tiger.Types.RECORD(sym("i"), (tiger.Types.INT)tEnv.get(sym("int")), null), Semant.INT));
 
 		s = sym("exit");
-		vEnv.put(s, new FunEntry(new tiger.Types.RECORD(sym("i"), (tiger.Types.INT)tEnv.get(sym("int")), null), Semant.VOID));
+		level = new Level(root, s, new BoolList(true, null));
+		label = new Label(s);
+		vEnv.put(s, new SysFunEntry(level, label, new tiger.Types.RECORD(sym("i"), (tiger.Types.INT)tEnv.get(sym("int")), null), Semant.VOID));
 	}
 
 	private tiger.Symbol.Symbol sym(String name) {
