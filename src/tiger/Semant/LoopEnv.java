@@ -1,26 +1,29 @@
 package tiger.Semant;
 
 import java.util.Stack;
+import tiger.Temp.Label;
 
 public class LoopEnv {
-	public class loop {}
-	Stack <Stack <loop> > s = new Stack <Stack <loop> > ();
+	Stack <Stack <Label> > s = new Stack <Stack <Label> > ();
 	LoopEnv () {
-		s.add(new Stack<loop> ());
+		s.add(new Stack<Label> ());
 	}
 	public void beginScope() {
-		s.add(new Stack<loop> ());
+		s.add(new Stack<Label> ());
 	}
 	public void endScope() {
 		s.pop();
 	}
-	public void add() {
-		s.peek().add(new loop());
+	public void newLoop() {
+		s.peek().add(new Label());
 	}
-	public void pop() {
-		s.peek().pop();
+	public Label exitLoop() {
+		return s.peek().pop();
 	}
-	public boolean canBreak() {
+	public Label done() {
+		return s.peek().peek();
+	}
+	public boolean inLoop() {
 		return (!s.peek().isEmpty());
 	}
 }

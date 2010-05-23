@@ -1,0 +1,275 @@
+package tiger.Parser;
+import java_cup.runtime.*;
+import tiger.Absyn.*;
+
+action code {:
+	static tiger.Symbol.Symbol symbol(String s) {
+		return tiger.Symbol.Symbol.symbol(s);
+	}
+:};
+
+parser code {:
+	public tiger.Symbol.Symbol symbol(String ID) {
+		return tiger.Symbol.Symbol.symbol(ID);
+	}
+
+	/* Change the method report_error so it will display the line and
+	   column of where the error occurred in the input as well as the
+	   reason for the error which is passed into the method in the
+	   String 'message'. */
+	public void report_error(String message, Object info) {
+
+		/* Create a StringBuffer called 'm' with the string 'Error' in it. */
+		StringBuffer m = new StringBuffer("Error");
+
+		/* Check if the information passed to the method is the same
+		   type as the type java_cup.runtime.Symbol. */
+		if (info instanceof java_cup.runtime.Symbol) {
+			/* Declare a java_cup.runtime.Symbol object 's' with the
+			   information in the object info that is being typecasted
+			   as a java_cup.runtime.Symbol object. */
+			java_cup.runtime.Symbol s = ((java_cup.runtime.Symbol) info);
+
+			/* Check if the line number in the input is greater or
+			   equal to zero. */
+			if (s.left >= 0) {
+				/* Add to the end of the StringBuffer error message
+				   the line number of the error in the input. */
+				m.append(" in line "+(s.left+1));   
+				/* Check if the column number in the input is greater
+				   or equal to zero. */
+				if (s.right >= 0)
+					/* Add to the end of the StringBuffer error message
+					   the column number of the error in the input. */
+					m.append(", column "+(s.right+1));
+			}
+		}
+
+		/* Add to the end of the StringBuffer error message created in
+		   this method the message that was passed into this method. */
+		m.append(" : "+message);
+
+		/* Print the contents of the StringBuffer 'm', which contains
+		   an error message, out on a line. */
+		System.err.println(m);
+	}
+
+	/* Change the method report_fatal_error so when it reports a fatal
+	   error it will display the line and column number of where the
+	   fatal error occurred in the input as well as the reason for the
+	   fatal error which is passed into the method in the object
+	   'message' and then exit.*/
+	public void report_fatal_error(String message, Object info) {
+		report_error(message, info);
+		System.exit(1);
+	}
+:};
+
+terminal ARRAY, BREAK, DO, ELSE, END, FOR, FUNCTION, IF, IN, LET, NIL, OF, THEN, TO, TYPE, VAR, WHILE,
+	COMMA, COLON, SEMI, LPAREN, RPAREN, LBRACK, RBRACK, LBRACE, RBRACE, DOT, PLUS, MINUS, TIMES, DIVIDE,
+	EQ, NEQ, LT, LE, GT, GE, AND, OR, ASSIGN, UMINUS;
+terminal Integer NUM;
+terminal String ID, STRING;
+
+non terminal Exp program;
+non terminal Exp expr;
+non terminal ExpList exprList;
+non terminal ExpList exprSeq;
+non terminal FieldExpList fieldList;
+non terminal Var lvalue;
+non terminal Dec decl;
+non terminal DecList declList;
+non terminal TypeDec typeDecl, typeDeclList;
+non terminal Ty type;
+non terminal FieldList typeFields;
+non terminal VarDec varDecl;
+non terminal FunctionDec funcDecl, funcDeclList;
+
+precedence right FUNCTION, TYPE;
+precedence right OF;
+precedence right DO, ELSE, THEN;
+precedence nonassoc ASSIGN;
+precedence left OR, AND;
+precedence nonassoc EQ, NEQ, LT, LE, GT, GE;
+precedence left PLUS, MINUS;
+precedence left TIMES, DIVIDE;
+precedence left UMINUS;
+precedence left LPAREN;
+
+start with program;
+
+program::= expr:e {: RESULT = (Exp)e; :}
+	;
+
+expr::= STRING:s
+	{: RESULT = new StringExp(sleft, sright, s); :}
+	|NUM:i
+	{: RESULT = new IntExp(ileft, iright, i.intValue()); :}
+	|NIL:n
+	{: RESULT = new NilExp(nleft, nright); :}
+	
+	|lvalue:l
+	{: RESULT = new VarExp(l.line, l.colume, l); :}
+	
+	|MINUS:m expr:e
+	{: RESULT = new OpExp(mleft, mright, new IntExp(e.line, e.colume, 0), OpExp.MINUS, e); :}
+	%prec UMINUS
+	
+	|expr:e1 PLUS expr:e2
+	{: RESULT = new OpExp(e1.line, e1.colume, e1, OpExp.PLUS, e2); :}
+	|expr:e1 MINUS expr:e2
+	{: RESULT = new OpExp(e1.line, e1.colume, e1, OpExp.MINUS, e2); :}
+	|expr:e1 TIMES expr:e2
+	{: RESULT = new OpExp(e1.line, e1.colume, e1, OpExp.MUL, e2); :}
+	|expr:e1 DIVIDE expr:e2
+	{: RESULT = new OpExp(e1.line, e1.colume, e1, OpExp.DIV, e2); :}
+	
+	|expr:e1 OR expr:e2
+	{: RESULT = new IfExp(e1.line, e1.colume, e1, new IntExp(e1.line, e1.colume, 1), e2); :}
+	|expr:e1 AND expr:e2
+	{: RESULT = new IfExp(e1.line, e1.colume, e1, e2, new IntExp(e1.line, e1.colume, 0)); :}
+	
+	|expr:e1 EQ expr:e2
+	{: RESULT = new OpExp(e1.line, e1.colume, e1, OpExp.EQ, e2); :}
+	|expr:e1 NEQ expr:e2
+	{: RESULT = new OpExp(e1.line, e1.colume, e1, OpExp.NE, e2); :}
+	|expr:e1 LT expr:e2
+	{: RESULT = new OpExp(e1.line, e1.colume, e1, OpExp.LT, e2); :}
+	|expr:e1 LE expr:e2
+	{: RESULT = new OpExp(e1.line, e1.colume, e1, OpExp.LE, e2); :}
+	|expr:e1 GT expr:e2
+	{: RESULT = new OpExp(e1.line, e1.colume, e1, OpExp.GT, e2); :}
+	|expr:e1 GE expr:e2
+	{: RESULT = new OpExp(e1.line, e1.colume, e1, OpExp.GE, e2); :}
+	
+	|lvalue:l ASSIGN expr:e
+	{: RESULT = new AssignExp(lleft, lright, l, e); :}
+	
+	|ID:i LPAREN exprList:elist RPAREN
+	{: RESULT = new CallExp(ileft, iright, symbol(i), elist); :}
+	|ID:i LPAREN RPAREN
+	{: RESULT = new CallExp(ileft, iright, symbol(i), null); :}
+	
+	|LPAREN:lp exprSeq:eseq RPAREN
+	{: RESULT = new SeqExp(lpleft, lpright, eseq); :}
+	|LPAREN:lp RPAREN
+	{: RESULT = new SeqExp(lpleft, lpright, null); :}
+	
+	|ID:i LBRACE fieldList:flist RBRACE
+	{: RESULT = new RecordExp(ileft, iright, symbol(i), flist); :}
+	|ID:i LBRACE RBRACE
+	{: RESULT = new RecordExp(ileft, iright, symbol(i), null); :}
+	
+	|ID:i LBRACK expr:e1 RBRACK OF expr:e2
+	{: RESULT = new ArrayExp(ileft, iright, symbol(i), e1, e2); :}
+	
+	|IF:i expr:e1 THEN expr:e2
+	{: RESULT = new IfExp(ileft, iright, e1, e2); :}
+	|IF:i expr:e1 THEN expr:e2 ELSE expr:e3
+	{: RESULT = new IfExp(ileft, iright, e1, e2, e3); :}
+	
+	|WHILE:w expr:e1 DO expr:e2
+	{: RESULT = new WhileExp(wleft, wright, e1, e2); :}
+	
+	|FOR:f ID:i ASSIGN expr:e1 TO expr:e2 DO expr:e3
+	{: RESULT = new ForExp(fleft, fright, new VarDec(ileft, iright, symbol(i), new NameTy(ileft, iright, symbol("int")), e1), e2, e3); :}
+	
+	|BREAK:b
+	{: RESULT = new BreakExp(bleft, bright); :}
+	
+	|LET:l declList:dlist IN exprSeq:eseq END
+	{: RESULT = new LetExp(lleft, lright, dlist, new SeqExp(eseqleft, eseqright, eseq)); :}
+
+	|LET:l declList:dlist IN END:end
+	{: RESULT = new LetExp(lleft, lright, dlist, new SeqExp(endleft, endright, null)); :}
+	;
+
+exprSeq::= expr:e
+	{: RESULT = new ExpList(e, null); :}
+	|expr:e SEMI exprSeq:eseq
+	{: RESULT = new ExpList(e, eseq); :}
+	;
+
+exprList::= expr:e
+	{: RESULT = new ExpList(e, null); :}
+	|expr:e COMMA exprList:elist
+	{: RESULT = new ExpList(e, elist); :}
+	;
+
+fieldList::= ID:i EQ expr:e
+	{: RESULT = new FieldExpList(ileft, iright, symbol(i), e, null); :}
+	|ID:i EQ expr:e COMMA fieldList:flist
+	{: RESULT = new FieldExpList(ileft, iright, symbol(i), e, flist); :}
+	;
+
+lvalue::= ID:i
+	{: RESULT = new SimpleVar(ileft, iright, symbol(i)); :}
+	|lvalue:l LBRACK expr:e RBRACK
+	{: RESULT = new SubscriptVar(lleft, lright, l, e); :}
+	|ID:i LBRACK expr:e RBRACK
+	{: RESULT = new SubscriptVar(ileft, iright, new SimpleVar(ileft, iright, symbol(i)), e); :}
+	|lvalue:l DOT ID:i
+	{: RESULT = new FieldVar(lleft, lright, l, symbol(i)); :}
+	;
+
+declList::= decl:d
+	{: RESULT = new DecList(d, null); :}
+	|decl:d declList:dlist
+	{: RESULT = new DecList(d, dlist); :}
+	;
+
+decl::= typeDeclList:t
+	{: RESULT = t; :}
+	|varDecl:v
+	{: RESULT = v; :}
+	|funcDeclList:f
+	{: RESULT = f; :}
+	;
+
+typeDeclList::= typeDecl:t
+	{: RESULT = t; :}
+	|typeDecl:t typeDeclList:l
+	{: RESULT = new TypeDec(t.line, t.colume, t.name, t.ty, l); :}
+	;
+
+typeDecl::= TYPE:t ID:i EQ type:t1
+	{: RESULT = new TypeDec(tleft, tright, symbol(i), t1, null); :}
+	;
+
+type::= ID:i
+	{: RESULT = new NameTy(ileft, iright, symbol(i)); :}
+	|LBRACE:l typeFields:tfields RBRACE
+	{: RESULT = new RecordTy(lleft, lright, tfields); :}
+	|LBRACE:l RBRACE
+	{: RESULT = new RecordTy(lleft, lright, null); :}
+	|ARRAY:a OF ID:i
+	{: RESULT = new ArrayTy(aleft, aright, symbol(i)); :}
+	;
+
+typeFields::= ID:i1 COLON ID:i2
+	{: RESULT = new FieldList(i1left, i2left, symbol(i1), symbol(i2), null); :}
+	|ID:i1 COLON ID:i2 COMMA typeFields:tfields
+	{: RESULT = new FieldList(i1left, i2left, symbol(i1), symbol(i2), tfields); :}
+	;
+
+varDecl::= VAR:v ID:i ASSIGN expr:e
+	{: RESULT = new VarDec(vleft, vright, symbol(i), null, e); :}
+	|VAR:v ID:i COLON ID:t ASSIGN expr:e
+	{: RESULT = new VarDec(vleft, vright, symbol(i), new NameTy(tleft, tright, symbol(t)), e); :}
+	;
+
+funcDeclList::= funcDecl:f
+	{: RESULT = f; :}
+	|funcDecl:f funcDeclList:flist
+	{: RESULT = new FunctionDec(f.line, f.colume, f.name, f.params, f.result, f.body, flist); :}
+	;
+
+funcDecl::= FUNCTION:f ID:i LPAREN typeFields:tfields RPAREN EQ expr:e
+	{: RESULT = new FunctionDec(fleft, fright, symbol(i), tfields, null, e, null); :}
+	|FUNCTION:f ID:i LPAREN RPAREN EQ expr:e
+	{: RESULT = new FunctionDec(fleft, fright, symbol(i), null, null, e, null); :}
+	|FUNCTION:f ID:i LPAREN typeFields:tfields RPAREN COLON ID:ty EQ expr:e
+	{: RESULT = new FunctionDec(fleft, fright, symbol(i), tfields, new NameTy(tyleft, tyright, symbol(ty)), e, null); :}
+	|FUNCTION:f ID:i LPAREN RPAREN COLON ID:ty EQ expr:e
+	{: RESULT = new FunctionDec(fleft, fright, symbol(i), null, new NameTy(tyleft, tyright, symbol(ty)), e, null); :}
+	;
