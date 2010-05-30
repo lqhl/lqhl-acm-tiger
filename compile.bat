@@ -1,0 +1,1 @@
+java -cp bin;lib\java-cup-11a-runtime.jar tiger.Main %1

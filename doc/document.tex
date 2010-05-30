@@ -1,0 +1,45 @@
+﻿% ----------------------------------------------------------------
+%Title: Tiger document
+%Author: Liu Qin
+% ----------------------------------------------------------------
+\documentclass[12pt]{amsart}
+% ----------------------------------------------------------------
+\vfuzz2pt % Don't report over-full v-boxes if over-edge is small
+\hfuzz2pt % Don't report over-full h-boxes if over-edge is small
+% ----------------------------------------------------------------
+\usepackage{ctex}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{hyperref}
+% THEOREMS -------------------------------------------------------
+\newtheorem{thm}{定理}[section]
+\newtheorem{cor}[thm]{推论}
+\newtheorem{lem}[thm]{引理}
+\newtheorem{prop}[thm]{命题}
+\newtheorem{defn}[thm]{定义}
+\newtheorem{rem}[thm]{注}
+% MATH -----------------------------------------------------------
+\newcommand{\norm}[1]{\left\Vert#1\right\Vert}
+\newcommand{\abs}[1]{\left\vert#1\right\vert}
+\newcommand{\set}[1]{\left\{#1\right\}}
+\newcommand{\Real}{\mathbb R}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\To}{\longrightarrow}
+\newcommand{\BX}{\mathbf{B}(X)}
+\newcommand{\A}{\mathcal{A}}
+% MY DEFINITION---------------------------------------------------
+\newcommand{\prob}[1]{\textbf{#1.\quad}}
+\newcommand{\ans}{\textit{Answer.\quad}}
+% ----------------------------------------------------------------
+\begin{document}
+
+\title{文档}
+\author{刘勤}
+%\keywords{}
+\address{上海交通大学 08级ACM班}
+\email{lqgy2001@gmail.com}
+\maketitle
+% ----------------------------------------------------------------
+
+% ----------------------------------------------------------------
+\end{document}
