@@ -1,25 +1,33 @@
 package tiger.Liveness;
 
 import java.io.PrintStream;
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.HashSet;
-
-import tiger.ThreeAddress.*;
+import tiger.Quadruples.*;
 
 public class Liveness {
-	ArrayList<Node> nodeList = new ArrayList<Node>();
-	ArrayList<TExp> instrList;
+	public LinkedList <LivenessNode> nodeList = new LinkedList<LivenessNode>();
+	public LinkedList <TExp> instrList;
 	
-	public Liveness(ArrayList<TExp> instrList) {
+	public Liveness(LinkedList<TExp> instrList) {
 		this.instrList = instrList;
 	}
 	
 	public void livenessAnalysis() {
-		for (int i = 0; i < instrList.size(); i++) {
-			Node n = new Node(instrList.get(i), i);
-			instrList.get(i).node = n;
-			nodeList.add(n);
-		}
+		buildNodeList();
+		
+		HashMap <tiger.Temp.Label, Integer> labelMap = new HashMap <tiger.Temp.Label, Integer>();
+		for (int i = 0; i < instrList.size(); i++)
+			if (instrList.get(i) instanceof Label)
+				labelMap.put(((Label)instrList.get(i)).label, i);
+		for (int i = 0; i < instrList.size(); i++)
+			if (instrList.get(i) instanceof CJump)
+				((CJump)instrList.get(i)).label.number = labelMap.get(((CJump)instrList.get(i)).label.label);
+			else if (instrList.get(i) instanceof CJumpI)
+				((CJumpI)instrList.get(i)).label.number = labelMap.get(((CJumpI)instrList.get(i)).label.label);
+			else if (instrList.get(i) instanceof Jump)
+				((Jump)instrList.get(i)).label.number = labelMap.get(((Jump)instrList.get(i)).label.label);
 		
 		for (int i = 0; i < instrList.size(); i++) {
 			if (instrList.get(i) instanceof Label) continue;
@@ -39,7 +47,7 @@ public class Liveness {
 		do {
 			flag = false;
 			for (int i = nodeList.size() - 1; i >= 0; i--) {
-				Node n = nodeList.get(i);
+				LivenessNode n = nodeList.get(i);
 				HashSet <tiger.Temp.Temp> inTmp = new HashSet <tiger.Temp.Temp> (n.in);
 				HashSet <tiger.Temp.Temp> outTmp = new HashSet <tiger.Temp.Temp> (n.out);
 				
@@ -58,7 +66,7 @@ public class Liveness {
 		} while (flag);
 	}
 
-	private Node findNext(int number) {
+	private LivenessNode findNext(int number) {
 		for (int i = number + 1; i < instrList.size(); i++) {
 			if (! (instrList.get(i) instanceof Label))
 				return instrList.get(i).node;
@@ -85,6 +93,14 @@ public class Liveness {
 			for (tiger.Temp.Temp it : nodeList.get(i).out)
 				out.print(" " + it);
 			out.println();
+		}
+	}
+
+	public void buildNodeList() {
+		for (int i = 0; i < instrList.size(); i++) {
+			LivenessNode n = new LivenessNode(instrList.get(i), i);
+			instrList.get(i).node = n;
+			nodeList.add(n);
 		}
 	}
 }

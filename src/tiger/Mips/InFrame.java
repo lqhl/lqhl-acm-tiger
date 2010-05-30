@@ -6,7 +6,7 @@ import tiger.Tree.*;
 
 public class InFrame extends Access {
 	private MipsFrame frame;
-	private int offset;
+	public int offset;
 	
 	InFrame(MipsFrame frame, int offset){
 		this.frame = frame;
@@ -18,7 +18,6 @@ public class InFrame extends Access {
 	}
 
 	public Expr expFromStack(Expr stackPtr) {
-		return new MEM(new BINOP(BINOP.PLUS, stackPtr, new CONST(-(frame.frameLength + frame.wordSize()) + offset)));
+		return new MEM(new BINOP(BINOP.PLUS, stackPtr, new CONST(-(frame.offset + frame.wordSize()) + offset)));
 	}
-
 }

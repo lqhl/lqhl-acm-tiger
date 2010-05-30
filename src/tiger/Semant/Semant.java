@@ -1,6 +1,7 @@
 package tiger.Semant;
 
 import tiger.Absyn.FieldList;
+import tiger.Absyn.OpExp;
 import tiger.Frame.Frame;
 import tiger.Temp.Label;
 import tiger.Translate.*;
@@ -60,7 +61,7 @@ public class Semant {
 	}
 	
 	public Frag transProg(tiger.Absyn.Exp e) {
-		level = new Level(level, tiger.Symbol.Symbol.symbol("main"), null);
+		level = new Level(level, new Label(tiger.Symbol.Symbol.symbol("main")), null);
 		ExpTy et = transExp(e);
 		translate.procEntryExit(level, et.exp, false);
 		level = level.parent;
@@ -288,7 +289,8 @@ public class Semant {
 				report_error(e.elseclause.line, e.elseclause.colume, "if-then-else should of same type");
 				return new ExpTy(null, VOID);
 			}
-		} else {
+		}
+		else {
 			if (eThen.ty.coerceTo(VOID))
 				return new ExpTy(translate.transIfThenElseExp(eTest.exp, eThen.exp, null), VOID);
 			else {
@@ -357,19 +359,31 @@ public class Semant {
 		} else if (e.oper == tiger.Absyn.OpExp.EQ || e.oper == tiger.Absyn.OpExp.NE){
 			Type ty = checkEqualType(eLeft, eRight, e.line, e.colume);
 			if (ty.coerceTo(STRING))
-				return new ExpTy(translate.transStringRelExp(e.oper, eLeft.exp, eRight.exp), INT);
+				return new ExpTy(translate.transStringRelExp(transOp(e.oper), eLeft.exp, eRight.exp), INT);
 			else
-				return new ExpTy(translate.transOtherRelExp(e.oper, eLeft.exp, eRight.exp), INT);
+				return new ExpTy(translate.transOtherRelExp(transOp(e.oper), eLeft.exp, eRight.exp), INT);
 		}
 		else {
 			Type ty = checkCmpType(eLeft, eRight, e.line, e.colume);
 			if (ty.coerceTo(STRING))
-				return new ExpTy(translate.transStringRelExp(e.oper, eLeft.exp, eRight.exp), INT);
+				return new ExpTy(translate.transStringRelExp(transOp(e.oper), eLeft.exp, eRight.exp), INT);
 			else
-				return new ExpTy(translate.transOtherRelExp(e.oper, eLeft.exp, eRight.exp), INT);
+				return new ExpTy(translate.transOtherRelExp(transOp(e.oper), eLeft.exp, eRight.exp), INT);
 		}
 	}
 	
+
+	private int transOp(int oper) {
+		switch (oper) {
+			case OpExp.EQ: return 0;
+			case OpExp.NE: return 1;
+			case OpExp.LT: return 2;
+			case OpExp.LE: return 4;
+			case OpExp.GT: return 3;
+			case OpExp.GE: return 5;
+			default: throw new RuntimeException("Error at transOp in Semant.");
+		}
+	}
 
 	ExpTy transExp(tiger.Absyn.RecordExp e) {
 		Type eType = (Type)env.tEnv.get(e.typ);
@@ -497,7 +511,7 @@ public class Semant {
 	Exp transDec(tiger.Absyn.FunctionDec d) {
 		List<tiger.Symbol.Symbol> list = new ArrayList <tiger.Symbol.Symbol> ();
 		for (tiger.Absyn.FunctionDec it = d; it != null; it = it.next)
-			if (env.vEnv.get(it.name) != null && env.vEnv.get(it.name) instanceof SysFunEntry)
+			if (env.vEnv.get(it.name) != null && env.vEnv.get(it.name) instanceof StdFunEntry)
 				report_error(it.line, it.colume, "This funtion has been defined in standard library");
 			else if (list.contains(it.name))
 				report_error(it.line, it.colume, "This funtion has been defined in this function declaration sequence");
@@ -505,7 +519,7 @@ public class Semant {
 				list.add(it.name);
 				Type result = (it.result == null) ? VOID : transTy(it.result).actual();
 				Label label = new Label(it.name);
-				Level new_level = new Level(level, it.name, makeBoolList(it.params));
+				Level new_level = new Level(level, label, makeBoolList(it.params));
 				env.vEnv.put(it.name, new FunEntry(new_level, label, transTypeFields(it.params), result));
 			}
 		for (tiger.Absyn.FunctionDec it = d; it != null; it = it.next) {

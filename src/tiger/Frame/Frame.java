@@ -1,7 +1,9 @@
 package tiger.Frame;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+import tiger.Quadruples.TExp;
 import tiger.Temp.*;
-import tiger.Assem.*;
 import tiger.Tree.*;
 import tiger.Util.BoolList;
 
@@ -14,12 +16,11 @@ public abstract class Frame implements TempMap {
 	public abstract Temp SP();
 	public abstract Temp RA();
 	public abstract Temp RV();
-	public abstract TempList registers();
+	public abstract LinkedList <Temp>  registers();
 	public abstract Expr externalCall(String funcName, ExpList args);
 	public abstract Stm procEntryExit1(Stm body);
-	public abstract InstrList procEntryExit2(InstrList body);
-	public abstract InstrList procEntryExit3(InstrList body);
+	public abstract ArrayList<TExp> procEntryExit2(ArrayList<TExp> body);
+	public abstract LinkedList<TExp> procEntryExit3(LinkedList<TExp> body);
 	public abstract String string(Label label, String values);
-	public abstract InstrList codegen(Stm s);
 	public abstract int wordSize();
 }
