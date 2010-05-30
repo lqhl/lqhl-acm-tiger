@@ -6,7 +6,7 @@ import tiger.Symbol.Symbol;
  */
 
 public class Label  {
-   private String name;
+   public String name;
    private static int count;
 
   /**

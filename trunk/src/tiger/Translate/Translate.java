@@ -157,7 +157,7 @@ public class Translate {
 			if (res == null)
 				res = new SEQ(prev.head.unNx(), ptr.head.unNx());
 			else
-				res = new SEQ(res, new SEQ(prev.head.unNx(), ptr.head.unNx()));
+				res = new SEQ(res, ptr.head.unNx());
 		}
 		if (isVOID)
 			return new Nx(new SEQ(res, ptr.head.unNx()));

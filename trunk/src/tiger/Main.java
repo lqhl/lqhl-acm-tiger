@@ -1,12 +1,15 @@
 package tiger;
 
 import java.io.*;
+import java.util.ArrayList;
 
 import tiger.Absyn.*;
+import tiger.Mips.MipsFrame;
 import tiger.Parser.*;
+import tiger.Quadruples.TExp;
 import tiger.Semant.*;
-import tiger.Translate.DataFrag;
 import tiger.Translate.Frag;
+import tiger.Translate.DataFrag;
 import tiger.Translate.ProcFrag;
 import tiger.FindEscape.*;
 
@@ -26,6 +29,7 @@ public class Main {
 			java.io.PrintStream outIR = new java.io.PrintStream("test.ir");
 			java.io.PrintStream outThreeAddr = new java.io.PrintStream("test.ta");
 			java.io.PrintStream outLiveness = new java.io.PrintStream("test.ln");
+			java.io.PrintStream outAssem = new java.io.PrintStream("test.s");
 			
 			parser p = new parser(new Lexer(FileIn));
 			
@@ -40,13 +44,24 @@ public class Main {
 			Print print = new Print(outABS);
 			print.prExp(result, 0);
 
-			for (Frag it = frags; it != null; it = it.next)
+			int count = 0;
+			for (Frag it = frags; it != null; it = it.next, count++) {
+				outThreeAddr.println("-----------Frag " + count + "-------------");
+				outIR.println("-----------Frag " + count + "-------------");
+				outAssem.println("###############Frag " + count + "################");
 				if (it instanceof ProcFrag)
-					emitProc(outIR, outThreeAddr, outLiveness, (ProcFrag)it);
-				else
+					emitProc(outIR, outThreeAddr, outLiveness, outAssem, (ProcFrag)it);
+				else {
 					outIR.println(((DataFrag)it).data);
-
-			System.out.println("Semantic analysis success.");
+					outThreeAddr.println(((DataFrag)it).data);
+					outAssem.println(((DataFrag)it).data);
+				}
+			}
+			outAssem.println();
+			BufferedReader runtime = new BufferedReader(new FileReader("runtime.s"));
+			while (runtime.ready())
+				outAssem.println(runtime.readLine());
+			System.out.println("Compile Success!");
 			System.exit(0);
 		}
 		catch (Exception e)
@@ -56,7 +71,7 @@ public class Main {
 		}
 	}
 
-	private static void emitProc(PrintStream outIR, PrintStream outThreeAddr, PrintStream outLiveness, ProcFrag f) throws FileNotFoundException {
+	private static void emitProc(PrintStream outIR, PrintStream outThreeAddr, PrintStream outLiveness, PrintStream outAssem, ProcFrag f) throws FileNotFoundException {
 		java.io.PrintStream debug = outIR;
 //		java.io.PrintStream debug = new java.io.PrintStream(new NullOutputStream());
 		tiger.Temp.TempMap tempmap= new tiger.Temp.CombineMap(f.frame,new tiger.Temp.DefaultMap());
@@ -76,13 +91,19 @@ public class Main {
 		debug.println("# Trace Scheduled: ");
 		tiger.Tree.StmList traced = (new tiger.Canon.TraceSchedule(b)).stms;
 		prStmList(print,traced);
-		tiger.ThreeAddress.ThreeAddress threeAddr = new tiger.ThreeAddress.ThreeAddress();
+		tiger.Quadruples.Quadruples threeAddr = new tiger.Quadruples.Quadruples((MipsFrame)f.frame);
 		threeAddr.codegen(traced);
-		tiger.ThreeAddress.Print printTA = new tiger.ThreeAddress.Print(outThreeAddr);
+		tiger.Quadruples.Print printTA = new tiger.Quadruples.Print(outThreeAddr);
 		printTA.print(threeAddr.instrList);
-		tiger.Liveness.Liveness liveness = new tiger.Liveness.Liveness(threeAddr.instrList);
-		liveness.livenessAnalysis();
-		liveness.print(outLiveness);
+		threeAddr.instrList = ((MipsFrame)f.frame).procEntryExit2(threeAddr.instrList);
+		//liveness & register allocate
+		tiger.RegAlloc.RegAlloc regAlloc = new tiger.RegAlloc.RegAlloc((MipsFrame)f.frame, threeAddr.instrList, f.frame.registers());
+		regAlloc.main();
+		regAlloc.reduceMoves();
+		//regAlloc.print(outThreeAddr);
+		regAlloc.instrList = ((MipsFrame)f.frame).procEntryExit3(regAlloc.instrList);
+		tiger.Codegen.Codegen codegen = new tiger.Codegen.Codegen(regAlloc.instrList, regAlloc.temp2Node, (MipsFrame)f.frame);
+		codegen.codegen(outAssem);
 	}
 	
 	static void prStmList(tiger.Tree.Print print, tiger.Tree.StmList stms) {

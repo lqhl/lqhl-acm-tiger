@@ -5,7 +5,7 @@ import tiger.Temp.Temp;
 import tiger.Tree.*;
 
 public class InReg extends Access {
-	private Temp reg;
+	Temp reg;
 	
 	public InReg() {
 		reg = new Temp();

@@ -13,9 +13,9 @@ public class Level {
 		return formals.head;
 	}
 	
-	public Level(Level p, Symbol n, BoolList f) {
+	public Level(Level p, Label n, BoolList f) {
 		parent = p;
-		frame = p.frame.newFrame(new Label(n), new BoolList(true, f));
+		frame = p.frame.newFrame(n, new BoolList(true, f));
 		formals = null;
 		AccessList ptr = null;
 		for(tiger.Frame.AccessList al = frame.formals; al !=null; al = al.tail)
