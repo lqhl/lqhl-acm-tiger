@@ -507,7 +507,7 @@ public class Semant {
 				report_error(it.line, it.colume, "This is a loop type declaration");
 		return translate.transNoOp();
 	}
-	
+	static int count = 0;
 	Exp transDec(tiger.Absyn.FunctionDec d) {
 		List<tiger.Symbol.Symbol> list = new ArrayList <tiger.Symbol.Symbol> ();
 		for (tiger.Absyn.FunctionDec it = d; it != null; it = it.next)
@@ -518,7 +518,8 @@ public class Semant {
 			else {
 				list.add(it.name);
 				Type result = (it.result == null) ? VOID : transTy(it.result).actual();
-				Label label = new Label(it.name);
+				Label label = new Label(it.name + "_" + count);
+				count++;
 				Level new_level = new Level(level, label, makeBoolList(it.params));
 				env.vEnv.put(it.name, new FunEntry(new_level, label, transTypeFields(it.params), result));
 			}

@@ -27,9 +27,9 @@ public class Codegen {
 		for (TExp e : instrList)
 			print(e);
 		if (frame.name.name != "main")
-			out.println("jr " + "$31");
+			out.println("jr " + "$ra");
 		else
-			out.println("j " + "exit");
+			out.println("j " + "_exit");
 	}
 	
 	private String getColor(Temp t) {
