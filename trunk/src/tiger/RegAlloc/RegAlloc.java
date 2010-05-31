@@ -13,7 +13,7 @@ import tiger.Temp.Temp;
 import tiger.Tree.BINOP;
 
 public class RegAlloc {
-	static final int K = 28;
+	static final int K = 27;
 
 	private static final int Infinity = 1 << 28;
 	
@@ -136,14 +136,20 @@ public class RegAlloc {
 	}
 
 	private void rewriteProgram(LinkedList <Node> spilledNodes) {
-		LinkedList <Node> newTemps = new LinkedList <Node> (); 
+		// TODO RegAlloc rewriteProgram
+		HashSet<Node> set = new HashSet<Node>();
+		LinkedList <Node> newTemps = new LinkedList <Node> ();
 		for (Node v : spilledNodes) {
+			if (set.contains(v)) continue;
+			// TODO why??? spilled 中有重复元素
+			set.add(v);
 			InFrame a = (InFrame)frame.allocLocal(true);
 			for (int i = 0; i < instrList.size(); i++) {
 				if (nodeList.get(i) == null) continue;
 				if (nodeList.get(i).use.contains(v.temp)) {
 					Temp p = new Temp();
 					newTemps.add(t2N(p));
+					t2N(p).isNew = true;
 					instrList.add(i, new Load(frame.FP(), a.offset, p));
 					nodeList.add(i, null);
 					instrList.get(++i).replaceUse(v.temp, p);
@@ -151,6 +157,7 @@ public class RegAlloc {
 				if (nodeList.get(i).def.contains(v.temp)) {
 					Temp p = new Temp();
 					newTemps.add(t2N(p));
+					t2N(p).isNew = true;
 					instrList.add(i + 1, new Store(frame.FP(), a.offset, p));
 					nodeList.add(i + 1, null);
 					instrList.get(i++).replaceDef(v.temp, p);
@@ -166,7 +173,7 @@ public class RegAlloc {
 	}
 
 	private void assignColors() {
-		//TODO assignColors
+		// TODO RegAlloc assignColors
 		while (!selectStack.isEmpty()) {
 			Node n = selectStack.pop();
 			LinkedList <Integer> okColors = new LinkedList <Integer> ();
@@ -195,13 +202,21 @@ public class RegAlloc {
 		// TODO RegAlloc select spill
 		Node m = null;
 		for (Node n : spillWorklist)
-			if (!precolored.contains(n) && (m == null || n.degree < m.degree)) {
+			if (!precolored.contains(n) && !n.isNew && (m == null || priority(n) < priority(m)))//n.degree > m.degree))
 				m = n;
-				break;
-			}
+		if (m == null) throw new RuntimeException("Error at selectSpill in RegAlloc");
 		spillWorklist.remove(m);
 		simplifyWorklist.add(m);
 		freezeMoves(m);
+	}
+
+	private double priority(Node m) {
+		double res = 0;
+		for (LivenessNode n : nodeList)
+			if (n.use.contains(m) || n.def.contains(m))
+				res += 1;
+		res /= m.degree;
+		return res;
 	}
 
 	private void freeze() {

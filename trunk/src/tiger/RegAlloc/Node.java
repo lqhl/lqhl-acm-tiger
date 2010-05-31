@@ -15,4 +15,5 @@ public class Node {
 	LinkedList <Move> moveList = new LinkedList <Move> ();
 	public Node alias;
 	public Integer color = null;
+	public boolean isNew = false;
 }

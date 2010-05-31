@@ -46,7 +46,7 @@ public class Translate {
 	}
 	
 	public Exp transStringRelExp(int op, Exp left, Exp right) {
-		Expr comp = frame.externalCall("_stringCompare", new tiger.Tree.ExpList(left.unEx(), new tiger.Tree.ExpList(right.unEx(), null)));
+		Expr comp = frame.externalCall("_strcmp", new tiger.Tree.ExpList(left.unEx(), new tiger.Tree.ExpList(right.unEx(), null)));
 		return new RelCx(op, new Ex(comp), new Ex(new CONST(0)));
 	}
 	
@@ -72,14 +72,6 @@ public class Translate {
 		return new Ex(new CALL(new NAME(name), args));
 	}
 	
-	public Exp transExtCallExp(Level home, Label name, ArrayList <Exp> argValue) {
-		tiger.Tree.ExpList args = null;
-		for (int i = argValue.size() - 1; i >= 0; i--)
-			args = new tiger.Tree.ExpList(argValue.get(i).unEx(), args);
-		return new Ex(home.frame.externalCall("_" + name.toString(), args));
-	}
-	
-
 	public Exp transRecordExp(Level home, ArrayList<Exp> field){
 		Temp addr = new Temp();
 		Expr alloc = home.frame.externalCall("_allocRecord",
