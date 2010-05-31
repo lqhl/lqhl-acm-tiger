@@ -33,7 +33,13 @@ public class Codegen {
 	}
 	
 	private String getColor(Temp t) {
-		String res = "$" + temp2Node.get(t).color;
+		final String[] map = {"zero", "at", "v0", "v1",
+				"a0", "a1", "a2", "a3", "t0", "t1",
+				"t2", "t3", "t4", "t5", "t6", "t7",
+				"s0", "s1", "s2", "s3", "s4", "s5",
+				"s6", "s7", "t8", "t9", "k0", "k1",
+				"gp", "sp", "fp", "ra"};
+		String res = "$" + map[temp2Node.get(t).color];
 		return res;
 	}
 	
@@ -91,12 +97,21 @@ public class Codegen {
 	}
 	
 	void print(BinOpI_L exp) {
-		throw new RuntimeException("Error at BinOpI_L in Codegen");
+		switch (exp.oper) {
+			case BINOP.PLUS:
+				out.println("add " + getColor(exp.dst) + ", " + getColor(exp.right) + ", " + exp.left);
+				break;
+			case BINOP.MINUS:
+				out.println("sub " + getColor(exp.dst) + ", " + getColor(exp.right) + ", " + exp.left);
+				out.println("sub " + getColor(exp.dst) + ", $zero, " + getColor(exp.dst));
+				break;
+			default: throw new RuntimeException("Error at BinOpI_L in Codegen");
+		}
 	}
 	
 	void print(Call exp) {
 		out.println("jal " + exp.name.label);
-		out.println("add $30, $29, " + -(frame.offset + frame.wordSize()));
+		out.println("add $fp, $sp, " + -frame.offset);
 	}
 	
 	void print(CJump exp) {

@@ -99,6 +99,8 @@ public class MipsFrame extends Frame {
 				body = new SEQ(new MOVE(ptr.head.exp(null), new TEMP(A(count))), body);
 				count++;
 			}
+		for (; count < 4; count++)
+			body = new SEQ(new MOVE(new TEMP(new Temp()), new TEMP(A(count))), body);
 		return body;
 	}
  
@@ -112,7 +114,7 @@ public class MipsFrame extends Frame {
 		ArrayList<TExp> pre = new ArrayList <TExp> ();
 		pre.add(new tiger.Quadruples.Label(name));
 		pre.add(new Move(FP(), SP()));
-		pre.add(new BinOpI_R(BINOP.MINUS, SP(), SP(), -(offset + wordSize)));
+		pre.add(new BinOpI_R(BINOP.MINUS, SP(), SP(), -offset));
 		instrList.addAll(0, pre);
 		instrList.add(new Move(SP(), FP()));
 		return instrList;
@@ -126,33 +128,32 @@ public class MipsFrame extends Frame {
 	}
  
 	public String string(Label label, String value) {
-		// TODO MipsFrame string
-        String ret = ".data\r\n"; 
-        ret = ret + label.toString() + ":";
-        ret = ret + ".asciiz \"";
+		String res = ".data\r\n"; 
+		res = res + label.toString() + ":";
+		res = res + ".asciiz \"";
 		char c;
 		for (int i = 0; i < value.length(); i++) {
 			c = value.charAt(i);
 			if (c == '\n')
-				ret = ret + "\\n";
+				res = res + "\\n";
 			else if (c == '\r')
-				ret = ret + "\\r";
+				res = res + "\\r";
 			else if (c == '\b')
-				ret = ret + "\\b";
+				res = res + "\\b";
 			else if (c == '\\')
-				ret = ret + "\\\\";
+				res = res + "\\\\";
 			else if (c == '\t')
-				ret = ret + "\\t";
+				res = res + "\\t";
 			else if (c == '\"')
-				ret = ret + "\"";
+				res = res + "\"";
 			else if (c == '\f')
-				ret = ret + "\\f";
+				res = res + "\\f";
 			else
-				ret = ret + c;
+				res = res + c;
 		}
-        ret = ret + "\"\r\n"; 
-        ret = ret + ".text";
-        return ret; 
+        res = res + "\"\r\n"; 
+        res = res + ".text";
+        return res; 
 	}
  
 	public int wordSize() {
@@ -160,7 +161,6 @@ public class MipsFrame extends Frame {
 	}
  
 	public String tempMap(Temp t) {
-		// TODO MipsFrame tempMap
-		return new String();
+		return t.toString();
 	}
 }

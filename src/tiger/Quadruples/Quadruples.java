@@ -95,7 +95,7 @@ public class Quadruples {
 			int offset;
 			if (((MEM)stm.dst).exp instanceof BINOP &&
 					((BINOP)((MEM)stm.dst).exp).right instanceof CONST) {
-				mem = ((TEMP)((BINOP)((MEM)stm.dst).exp).left).temp;
+				mem = transExpr(((BINOP)((MEM)stm.dst).exp).left);
 				offset = ((CONST)((BINOP)((MEM)stm.dst).exp).right).value;
 			}
 			else {
@@ -172,6 +172,7 @@ public class Quadruples {
 	}
 	
 	Temp transExpr(CALL expr) {
+		// TODO Call
 		Call cExp = new Call();
 		cExp.name = new Label(((NAME)expr.func).label);
 		TempList argList = null, ptr = null;
@@ -190,9 +191,9 @@ public class Quadruples {
 				break;
 			}
 		
-		Temp[] newTemps = new Temp[4];
-		for (int i = 0; i < 4; i++)
-			instrList.add(new Move(newTemps[i] = new Temp(), frame.A(i)));
+//		Temp[] newTemps = new Temp[4];
+//		for (int i = 0; i < 4; i++)
+//			instrList.add(new Move(newTemps[i] = new Temp(), frame.A(i)));
 		
 		if (tFrame == null) {
 			int count = 0;
@@ -213,8 +214,8 @@ public class Quadruples {
 					instrList.add(new Store(tFrame.SP(), ((InFrame)al.head).offset, ptr.head));
 		}
 		instrList.add(cExp);
-		for (int i = 0; i < 4; i++)
-			instrList.add(new Move(frame.A(i), newTemps[i]));
+//		for (int i = 0; i < 4; i++)
+//			instrList.add(new Move(frame.A(i), newTemps[i]));
 		return frame.RV();
 	}
 }

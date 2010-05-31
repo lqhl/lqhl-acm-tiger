@@ -18,6 +18,6 @@ public class InFrame extends Access {
 	}
 
 	public Expr expFromStack(Expr stackPtr) {
-		return new MEM(new BINOP(BINOP.PLUS, stackPtr, new CONST(-(frame.offset + frame.wordSize()) + offset)));
+		return new MEM(new BINOP(BINOP.PLUS, stackPtr, new CONST(-frame.offset + offset)));
 	}
 }

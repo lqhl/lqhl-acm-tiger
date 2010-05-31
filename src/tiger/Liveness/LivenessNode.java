@@ -35,8 +35,9 @@ public class LivenessNode {
 		}
 		else if (k instanceof Call) {
 			// TODO liveness Call
-			//define: rv
+			//define: v0, v1
 			def.add(MipsFrame.Reg[2]);
+			def.add(MipsFrame.Reg[3]);
 			//define: a0-a3
 			for (int i = 0; i < 4; i++)
 				def.add(MipsFrame.Reg[4 + i]);
@@ -47,6 +48,7 @@ public class LivenessNode {
 			def.add(MipsFrame.Reg[25]);
 			//define: ra
 			def.add(MipsFrame.Reg[31]);
+			/*
 			//use: a0-a3
 			for (int i = 0; i < 4; i++)
 				use.add(MipsFrame.Reg[4 + i]);
@@ -56,6 +58,7 @@ public class LivenessNode {
 			use.add(MipsFrame.Reg[30]);
 			//use: ra
 			use.add(MipsFrame.Reg[31]);
+			 */
 		}
 		else if (k instanceof CJump) {
 			use.add(((CJump)k).left);
@@ -66,10 +69,12 @@ public class LivenessNode {
 		}
 		else if (k instanceof EnterFunc) {
 			// TODO liveness EnterFunc
+			/*
 			for (int i = 0; i <= 3; i++)
 				def.add(MipsFrame.Reg[i]);
 			for (int i = 26; i <= 31; i++)
 				def.add(MipsFrame.Reg[i]);
+			*/
 		}
 		else if (k instanceof Jump) {
 			
@@ -90,6 +95,7 @@ public class LivenessNode {
 		}
 		else if (k instanceof ReturnSink) {
 			// TODO liveness ReturnSink
+			/*
 			//zero
 			use.add(MipsFrame.Reg[0]);
 			//at
@@ -107,11 +113,12 @@ public class LivenessNode {
 			use.add(MipsFrame.Reg[29]);
 			//fp
 			use.add(MipsFrame.Reg[30]);
-			//ra
-			use.add(MipsFrame.Reg[31]);
+			*/
 			//s0-s7
 			for (int i = 0; i < 8; i++)
 				use.add(MipsFrame.Reg[16 + i]);
+			//ra
+			use.add(MipsFrame.Reg[31]);
 		}
 		else if (k instanceof Store) {
 			use.add(((Store)k).mem);
