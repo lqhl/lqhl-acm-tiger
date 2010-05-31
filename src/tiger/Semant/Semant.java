@@ -194,7 +194,11 @@ public class Semant {
 		ExpTy eInit = transExp(e.init);
 		checkAssign(((ARRAY)eType).element.actual(), eInit.ty, e.line, e.colume);
 		
-		return new ExpTy(translate.transArrayExp(level, eInit.exp, arraySize.exp), eType);
+		if (eInit.ty.actual() instanceof ARRAY) {
+			return new ExpTy(translate.transMultiArrayExp(level, eInit.exp, arraySize.exp), eType);
+		}
+		else
+			return new ExpTy(translate.transArrayExp(level, eInit.exp, arraySize.exp), eType);
 	}
 
 	ExpTy transExp(tiger.Absyn.AssignExp e) {

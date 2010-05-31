@@ -2,6 +2,7 @@ package tiger.Translate;
 
 import java.util.ArrayList;
 
+import tiger.Mips.InReg;
 import tiger.Tree.*;
 import tiger.Frame.*;
 import tiger.Temp.*;
@@ -91,6 +92,23 @@ public class Translate {
 	public Exp transArrayExp(Level home, Exp init, Exp size) {
 		Expr alloc = home.frame.externalCall("_initArray", new tiger.Tree.ExpList(size.unEx(), new tiger.Tree.ExpList(init.unEx(), null)));
 		return new Ex(alloc);
+	}
+	
+	public Exp transMultiArrayExp(Level home, Exp init, Exp size) {
+		// TODO transMultiArrayExp
+		Expr alloc = home.frame.externalCall("_malloc",
+				new tiger.Tree.ExpList(
+				new BINOP(BINOP.MUL, size.unEx(), new CONST(frame.wordSize())),
+				null));
+		Temp addr = new Temp();
+		Access var = home.allocLocal(false);
+		Stm initialization = (new ForExp(home, var, new Ex(new CONST(0)),
+				new Ex(new BINOP(BINOP.MINUS, size.unEx(), new CONST(1))),
+				new Nx(new MOVE(
+				new MEM(new BINOP(BINOP.PLUS, new TEMP(addr), new BINOP(BINOP.MUL, var.access.exp(null), new CONST(frame.wordSize())))),
+				init.unEx())),
+				new Label())).unNx();
+		return new Ex(new ESEQ(new SEQ(new MOVE(new TEMP(addr), alloc), initialization), new TEMP(addr)));
 	}
 	
 	public Exp transIfThenElseExp(Exp test, Exp e_then, Exp e_else) {
