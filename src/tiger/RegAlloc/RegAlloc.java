@@ -3,17 +3,16 @@ package tiger.RegAlloc;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Hashtable;
 import java.util.Stack;
 import tiger.Mips.*;
 import tiger.Liveness.*;
 import tiger.Quadruples.*;
 import tiger.Temp.Temp;
-import tiger.Tree.BINOP;
 
 public class RegAlloc {
-	static final int K = 27;
+	static final int K = 28;
 
 	private static final int Infinity = 1 << 28;
 	
@@ -37,15 +36,15 @@ public class RegAlloc {
 		}
 	}
 	
-	HashSet <Edge> adjSet = new HashSet <Edge> (); 
+	LinkedHashSet <Edge> adjSet = new LinkedHashSet <Edge> (); 
 	
 	public Hashtable <Temp, Node> temp2Node = new Hashtable <Temp, Node> ();
 	
-	LinkedList <Node> precolored = new LinkedList <Node> ();
-	LinkedList <Node> initial = new LinkedList <Node> ();
-	LinkedList <Node> simplifyWorklist = new LinkedList <Node> (), freezeWorklist = new LinkedList <Node> (),
-						spillWorklist = new LinkedList <Node> (), spilledNodes = new LinkedList <Node> (),
-						coalescedNodes = new LinkedList <Node> (), coloredNodes = new LinkedList <Node> ();
+	LinkedHashSet <Node> precolored = new LinkedHashSet <Node> ();
+	LinkedHashSet <Node> initial = new LinkedHashSet <Node> ();
+	LinkedHashSet <Node> simplifyWorklist = new LinkedHashSet <Node> (), freezeWorklist = new LinkedHashSet <Node> (),
+						spillWorklist = new LinkedHashSet <Node> (), spilledNodes = new LinkedHashSet <Node> (),
+						coalescedNodes = new LinkedHashSet <Node> (), coloredNodes = new LinkedHashSet <Node> ();
 	Stack <Node> selectStack = new Stack <Node> ();
 	
 	LinkedList <tiger.Quadruples.Move> coalescedMoves = new LinkedList <tiger.Quadruples.Move> (),
@@ -54,13 +53,13 @@ public class RegAlloc {
 										worklistMoves = new LinkedList <tiger.Quadruples.Move> (),
 										activeMoves = new LinkedList <tiger.Quadruples.Move> ();
 	
-	public RegAlloc(MipsFrame frame, ArrayList<TExp> instrList, LinkedList <Temp> precolored) {
+	public RegAlloc(MipsFrame frame, LinkedList<TExp> instrList, Temp[] precolored) {
 		this.frame = frame;
-		this.instrList = modify(instrList);
-		for (int i = 0; i < precolored.size(); i++) {
-			this.precolored.add(t2N(precolored.get(i)));
-			t2N(precolored.get(i)).color = i;
-			t2N(precolored.get(i)).degree = Infinity;
+		this.instrList = instrList;
+		for (int i = 0; i < precolored.length; i++) {
+			this.precolored.add(t2N(precolored[i]));
+			t2N(precolored[i]).color = i;
+			t2N(precolored[i]).degree = Infinity;
 		}
 		Liveness liveness = new Liveness(this.instrList);
 		liveness.buildNodeList();
@@ -72,46 +71,7 @@ public class RegAlloc {
 			for (Temp t : n.use)
 				if (temp2Node.get(t) == null)
 					initial.add(t2N(t));
-			for (Temp t : n.in)
-				if (temp2Node.get(t) == null)
-					initial.add(t2N(t));
-			for (Temp t : n.out)
-				if (temp2Node.get(t) == null)
-					initial.add(t2N(t));
 		}
-	}
-	
-	private LinkedList<TExp> modify(ArrayList<TExp> instrList) {
-		LinkedList<TExp> res = new LinkedList<TExp>(instrList);
-		for (int i = 0; i < res.size(); i++)
-			if (res.get(i) instanceof CJumpI) {
-				CJumpI c = (CJumpI)res.get(i);
-				Temp newTemp = new Temp();
-				res.add(i, new BinOpI_R(BINOP.MINUS, newTemp, c.left, c.right));
-				c.left = newTemp;
-				c.right = 0;
-				i++;
-			}
-		for (int i = 0; i < res.size(); i++)
-			if (res.get(i) instanceof StoreI) {
-				StoreI s = (StoreI)res.get(i);
-				res.remove(i);
-				Temp newTemp = new Temp();
-				res.add(i, new MoveI(newTemp, s.src));
-				i++;
-				res.add(i, new Store(s.mem, s.offset, newTemp));
-			}
-		for (int i = 0; i < res.size(); i++)
-			if (res.get(i) instanceof BinOpI_R) {
-				BinOpI_R b = (BinOpI_R)res.get(i);
-				if (b.oper == BINOP.PLUS || b.oper == BINOP.MINUS) continue;
-				res.remove(i);
-				Temp newTemp = new Temp();
-				res.add(i, new MoveI(newTemp, b.right));
-				i++;
-				res.add(i, new BinOp(b.oper, b.dst, b.left, newTemp));
-			}
-		return res;
 	}
 
 	public void main() {
@@ -135,14 +95,9 @@ public class RegAlloc {
 		}
 	}
 
-	private void rewriteProgram(LinkedList <Node> spilledNodes) {
-		// TODO RegAlloc rewriteProgram
-		HashSet<Node> set = new HashSet<Node>();
-		LinkedList <Node> newTemps = new LinkedList <Node> ();
+	private void rewriteProgram(LinkedHashSet <Node> spilledNodes) {
+		LinkedHashSet <Node> newTemps = new LinkedHashSet <Node> ();
 		for (Node v : spilledNodes) {
-			if (set.contains(v)) continue;
-			// TODO why??? spilled 中有重复元素
-			set.add(v);
 			InFrame a = (InFrame)frame.allocLocal(true);
 			for (int i = 0; i < instrList.size(); i++) {
 				if (nodeList.get(i) == null) continue;
@@ -173,15 +128,14 @@ public class RegAlloc {
 	}
 
 	private void assignColors() {
-		// TODO RegAlloc assignColors
 		while (!selectStack.isEmpty()) {
 			Node n = selectStack.pop();
-			LinkedList <Integer> okColors = new LinkedList <Integer> ();
+			ArrayList <Integer> okColors = new ArrayList <Integer> ();
 			for (int i = 2; i <= 25; i++)
 				okColors.add(i);
-			for (int i = 29; i <= 31; i++)
+			for (int i = 28; i <= 31; i++)
 				okColors.add(i);
-			LinkedList <Node> nodes = new LinkedList <Node> (precolored);
+			LinkedHashSet <Node> nodes = new LinkedHashSet <Node> (precolored);
 			nodes.addAll(coloredNodes);
 			for (Node w : n.adjList)
 				if (nodes.contains(getAlias(w)))
@@ -190,7 +144,7 @@ public class RegAlloc {
 				spilledNodes.add(n);
 			else {
 				coloredNodes.add(n);
-				Integer c = okColors.peek();
+				Integer c = okColors.get(0);
 				n.color = c;
 			}
 		}
@@ -201,9 +155,12 @@ public class RegAlloc {
 	private void selectSpill() {
 		// TODO RegAlloc select spill
 		Node m = null;
+		double minPriority = Infinity;
 		for (Node n : spillWorklist)
-			if (!precolored.contains(n) && !n.isNew && (m == null || priority(n) < priority(m)))//n.degree > m.degree))
+			if (!precolored.contains(n) && !n.isNew && priority(n) < minPriority) {
 				m = n;
+				minPriority = priority(n);
+			}
 		if (m == null) throw new RuntimeException("Error at selectSpill in RegAlloc");
 		spillWorklist.remove(m);
 		simplifyWorklist.add(m);
@@ -212,15 +169,19 @@ public class RegAlloc {
 
 	private double priority(Node m) {
 		double res = 0;
-		for (LivenessNode n : nodeList)
-			if (n.use.contains(m) || n.def.contains(m))
-				res += 1;
+		for (LivenessNode n : nodeList) {
+			if (n.def.contains(m.temp))
+				res++;
+			if (n.use.contains(m.temp))
+				res++;
+		}
 		res /= m.degree;
 		return res;
 	}
 
 	private void freeze() {
-		Node u = freezeWorklist.poll();
+		Node u = freezeWorklist.iterator().next();
+		freezeWorklist.remove(u);
 		simplifyWorklist.add(u);
 		freezeMoves(u);
 	}
@@ -284,7 +245,7 @@ public class RegAlloc {
 			spillWorklist.remove(v);
 		coalescedNodes.add(v);
 		v.alias = u;
-		HashSet <Move> tmp = new HashSet <Move> (u.moveList);
+		LinkedHashSet <Move> tmp = new LinkedHashSet <Move> (u.moveList);
 		tmp.addAll(v.moveList);
 		u.moveList = new LinkedList <Move> (tmp);
 		LinkedList<Node> vv = new LinkedList<Node> ();
@@ -334,7 +295,8 @@ public class RegAlloc {
 	}
 
 	private void simplify() {
-		Node n = simplifyWorklist.poll();
+		Node n = simplifyWorklist.iterator().next();
+		simplifyWorklist.remove(n);
 		selectStack.push(n);
 		for (Node m : adjacent(n))
 			decrementDegree(m);
@@ -366,7 +328,8 @@ public class RegAlloc {
 
 	private void makeWorklist() {
 		while (!initial.isEmpty()) {
-			Node n = initial.poll();
+			Node n = initial.iterator().next();
+			initial.remove(n);
 			if (n.degree >= K)
 				spillWorklist.add(n);
 			else if (moveRelated(n))
@@ -400,11 +363,11 @@ public class RegAlloc {
 				|| instrList.get(i) instanceof CJumpI
 				|| instrList.get(i) instanceof Jump
 				|| (i + 1 < instrList.size() && instrList.get(i + 1) instanceof Label)) {
-				HashSet <Temp> live = new HashSet<Temp> (nodeList.get(i).out);
+				LinkedHashSet <Temp> live = new LinkedHashSet<Temp> (nodeList.get(i).out);
 				for (int j = i; !(instrList.get(j) instanceof Label); j--) {
 					if (instrList.get(j) instanceof Move) {
 						live.removeAll(nodeList.get(j).use);
-						HashSet <Temp> nodes = new HashSet <Temp> (nodeList.get(j).def);
+						LinkedHashSet <Temp> nodes = new LinkedHashSet <Temp> (nodeList.get(j).def);
 						nodes.addAll(nodeList.get(j).use);
 						for (Temp t : nodes) {
 							Node n = t2N(t);
@@ -436,11 +399,11 @@ public class RegAlloc {
 		if (u != v && !adjSet.contains(new Edge(uu, vv))) {
 			adjSet.add(new Edge(uu, vv));
 			adjSet.add(new Edge(vv, uu));
-			if (!precolored.contains(u)) {
+			if (!precolored.contains(uu)) {
 				uu.adjList.add(vv);
 				uu.degree++;
 			}
-			if (!precolored.contains(v)) {
+			if (!precolored.contains(vv)) {
 				vv.adjList.add(uu);
 				vv.degree++;
 			}
@@ -450,17 +413,5 @@ public class RegAlloc {
 	public void print(PrintStream out) {
 		for (Node n : coloredNodes)
 			out.println(n.temp + ": $" + n.color);
-	}
-
-	public void reduceMoves() {
-		for (int i = 0; i < instrList.size(); i++) {
-			if (instrList.get(i) instanceof Move) {
-				Move n = (Move)instrList.get(i);
-				if (t2N(n.dst).color == t2N(n.src).color) {
-					instrList.remove(i);
-					i--;
-				}
-			}
-		}
 	}
 }

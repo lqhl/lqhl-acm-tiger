@@ -23,13 +23,21 @@ public class WhileExp extends Exp {
 	}
 
 	Stm unNx() {
+		/*
 		Label begin = new Label();
 		Label t = new Label();
-		return new SEQ( new LABEL(begin),
+		return new SEQ(new LABEL(begin),
 				new SEQ(test.unCx(t, done),
 				new SEQ(new LABEL(t),
 				new SEQ(body.unNx(),
 				new SEQ(new JUMP(begin),
 				new LABEL(done))))));
+		//*/
+		Label begin = new Label();
+		return new SEQ(test.unCx(begin, done),
+				new SEQ(new LABEL(begin),
+				new SEQ(body.unNx(),
+				new SEQ(test.unCx(begin, done),
+				new LABEL(done)))));
 	}
 }

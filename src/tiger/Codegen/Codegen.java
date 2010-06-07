@@ -48,8 +48,6 @@ public class Codegen {
 			print((BinOp)exp);
 		else if (exp instanceof BinOpI_R)
 			print((BinOpI_R)exp);
-		else if (exp instanceof BinOpI_L)
-			print((BinOpI_L)exp);
 		else if (exp instanceof Call)
 			print((Call)exp);
 		else if (exp instanceof CJump)
@@ -72,8 +70,6 @@ public class Codegen {
 			print((ReturnSink)exp);
 		else if (exp instanceof Store)
 			print((Store)exp);
-		else if (exp instanceof StoreI)
-			print((StoreI)exp);
 	}
 	
 	void print(BinOp exp) {
@@ -91,22 +87,11 @@ public class Codegen {
 		switch (exp.oper) {
 			case BINOP.PLUS: out.print("add"); break;
 			case BINOP.MINUS: out.print("sub"); break;
+			case BINOP.MUL: out.print("mul"); break;
+			case BINOP.DIV: out.print("div"); break;
 			default: throw new RuntimeException("Error at BinOpI_R in Codegen");
 		}
 		out.println(' ' + getColor(exp.dst) + ", " + getColor(exp.left) + ", " + exp.right);
-	}
-	
-	void print(BinOpI_L exp) {
-		switch (exp.oper) {
-			case BINOP.PLUS:
-				out.println("add " + getColor(exp.dst) + ", " + getColor(exp.right) + ", " + exp.left);
-				break;
-			case BINOP.MINUS:
-				out.println("sub " + getColor(exp.dst) + ", " + getColor(exp.right) + ", " + exp.left);
-				out.println("sub " + getColor(exp.dst) + ", $zero, " + getColor(exp.dst));
-				break;
-			default: throw new RuntimeException("Error at BinOpI_L in Codegen");
-		}
 	}
 	
 	void print(Call exp) {
@@ -129,15 +114,15 @@ public class Codegen {
 	
 	void print(CJumpI exp) {
 		switch (exp.relop) {
-			case CJUMP.EQ: out.print("beqz"); break;
-			case CJUMP.NE: out.print("bnez"); break;
-			case CJUMP.LT: out.print("bltz"); break;
-			case CJUMP.GT: out.print("bgtz"); break;
-			case CJUMP.LE: out.print("blez"); break;
-			case CJUMP.GE: out.print("bgez"); break;
+			case CJUMP.EQ: out.print("beq"); break;
+			case CJUMP.NE: out.print("bne"); break;
+			case CJUMP.LT: out.print("blt"); break;
+			case CJUMP.GT: out.print("bgt"); break;
+			case CJUMP.LE: out.print("ble"); break;
+			case CJUMP.GE: out.print("bge"); break;
 			default: throw new RuntimeException("Error at CJumpI in Codegen");
 		}
-	out.println(' ' + getColor(exp.left) + ", " + exp.label.label);
+		out.println(' ' + getColor(exp.left) + ", " + exp.right + ", " + exp.label.label);
 	}
 	
 	void print(Jump exp) {
@@ -153,7 +138,8 @@ public class Codegen {
 	}
 	
 	void print(Move exp) {
-		out.println("move " + getColor(exp.dst) + ", " + getColor(exp.src));
+		if (!getColor(exp.dst).equals(getColor(exp.src)))
+			out.println("move " + getColor(exp.dst) + ", " + getColor(exp.src));
 	}
 	
 	void print(MoveI exp) {
@@ -170,9 +156,5 @@ public class Codegen {
 	
 	void print(Store exp) {
 		out.println("sw " + getColor(exp.src) + ", " + exp.offset + '(' + getColor(exp.mem) + ')');
-	}
-	
-	void print(StoreI exp) {
-		throw new RuntimeException("Error at StoreI in Codegen");
 	}
 }

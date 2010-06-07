@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import tiger.Frame.*;
 import tiger.Quadruples.BinOpI_R;
-import tiger.Quadruples.EnterFunc;
 import tiger.Quadruples.Move;
 import tiger.Quadruples.ReturnSink;
 import tiger.Quadruples.TExp;
@@ -104,8 +103,7 @@ public class MipsFrame extends Frame {
 		return body;
 	}
  
-	public ArrayList<TExp> procEntryExit2(ArrayList<TExp> body) {
-		body.add(new EnterFunc());
+	public LinkedList<TExp> procEntryExit2(LinkedList<TExp> body) {
 		body.add(new ReturnSink());
 		return body;
 	}
@@ -120,11 +118,8 @@ public class MipsFrame extends Frame {
 		return instrList;
 	}
  
-	public LinkedList <Temp> registers() {
-		LinkedList <Temp> res = new LinkedList <Temp> ();
-		for (int i = 0; i < 32; i++)
-			res.add(Reg[i]);
-		return res;
+	public Temp[] registers() {
+		return Reg;
 	}
  
 	public String string(Label label, String value) {

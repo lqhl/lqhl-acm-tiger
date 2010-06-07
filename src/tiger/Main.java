@@ -1,12 +1,9 @@
 package tiger;
 
 import java.io.*;
-import java.util.ArrayList;
-
 import tiger.Absyn.*;
 import tiger.Mips.MipsFrame;
 import tiger.Parser.*;
-import tiger.Quadruples.TExp;
 import tiger.Semant.*;
 import tiger.Translate.Frag;
 import tiger.Translate.DataFrag;
@@ -19,17 +16,18 @@ public class Main {
 		{
 //			FileReader FileIn = new FileReader(argv[0]);
 //			if (!argv[0].matches(".+\\.tig")) throw new RuntimeException("Error filename extension");
-//			java.io.PrintStream outABS = new java.io.PrintStream(argv[0].substring(0, argv[0].length() - 3) + "abs");
-//			java.io.PrintStream outIR = new java.io.PrintStream(argv[0].substring(0, argv[0].length() - 3) + "ir"));
-//			java.io.PrintStream outThreeAddr = new java.io.PrintStream(argv[0].substring(0, argv[0].length() - 3) + "ta"));
-//			java.io.PrintStream outLiveness = new java.io.PrintStream(argv[0].substring(0, argv[0].length() - 3) + "ln"));
+//			PrintStream outABS = new PrintStream(argv[0].substring(0, argv[0].length() - 3) + "abs");
+//			PrintStream outIR = new PrintStream(argv[0].substring(0, argv[0].length() - 3) + "ir"));
+//			PrintStream outThreeAddr = new PrintStream(argv[0].substring(0, argv[0].length() - 3) + "ta"));
+//			PrintStream outLiveness = new PrintStream(argv[0].substring(0, argv[0].length() - 3) + "ln"));
+//			PrintStream outAssem = new PrintStream(argv[0].substring(0, argv[0].length() - 3) + "s"));
 
 			FileReader FileIn = new FileReader("test.tig");
-			java.io.PrintStream outABS = new java.io.PrintStream("test.abs");
-			java.io.PrintStream outIR = new java.io.PrintStream("test.ir");
-			java.io.PrintStream outThreeAddr = new java.io.PrintStream("test.ta");
-			java.io.PrintStream outLiveness = new java.io.PrintStream("test.ln");
-			java.io.PrintStream outAssem = new java.io.PrintStream("test.s");
+			PrintStream outABS = new PrintStream("test.abs");
+			PrintStream outIR = new PrintStream("test.ir");
+			PrintStream outThreeAddr = new PrintStream("test.ta");
+			PrintStream outLiveness = new PrintStream("test.ln");
+			PrintStream outAssem = new PrintStream("test.s");
 			
 			parser p = new parser(new Lexer(FileIn));
 			
@@ -72,8 +70,8 @@ public class Main {
 	}
 
 	private static void emitProc(PrintStream outIR, PrintStream outThreeAddr, PrintStream outLiveness, PrintStream outAssem, ProcFrag f) throws FileNotFoundException {
-		java.io.PrintStream debug = outIR;
-//		java.io.PrintStream debug = new java.io.PrintStream(new NullOutputStream());
+		PrintStream debug = outIR;
+//		PrintStream debug = new PrintStream(new NullOutputStream());
 		tiger.Temp.TempMap tempmap= new tiger.Temp.CombineMap(f.frame,new tiger.Temp.DefaultMap());
 		tiger.Tree.Print print = new tiger.Tree.Print(debug, tempmap);
 		debug.println("# Before canonicalization: ");
@@ -99,7 +97,6 @@ public class Main {
 		//liveness & register allocate
 		tiger.RegAlloc.RegAlloc regAlloc = new tiger.RegAlloc.RegAlloc((MipsFrame)f.frame, threeAddr.instrList, f.frame.registers());
 		regAlloc.main();
-		regAlloc.reduceMoves();
 		//regAlloc.print(outThreeAddr);
 		regAlloc.instrList = ((MipsFrame)f.frame).procEntryExit3(regAlloc.instrList);
 		tiger.Codegen.Codegen codegen = new tiger.Codegen.Codegen(regAlloc.instrList, regAlloc.temp2Node, (MipsFrame)f.frame);
@@ -110,7 +107,7 @@ public class Main {
 		for(tiger.Tree.StmList l = stms; l!=null; l=l.tail)
 			print.prStm(l.head);
 	}
-	class NullOutputStream extends java.io.OutputStream {
+	class NullOutputStream extends OutputStream {
 		public void write(int b) {}
 	}
 }
