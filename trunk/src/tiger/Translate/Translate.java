@@ -2,7 +2,6 @@ package tiger.Translate;
 
 import java.util.ArrayList;
 
-import tiger.Mips.InReg;
 import tiger.Tree.*;
 import tiger.Frame.*;
 import tiger.Temp.*;
@@ -95,7 +94,6 @@ public class Translate {
 	}
 	
 	public Exp transMultiArrayExp(Level home, Exp init, Exp size) {
-		// TODO transMultiArrayExp
 		Expr alloc = home.frame.externalCall("_malloc",
 				new tiger.Tree.ExpList(
 				new BINOP(BINOP.MUL, size.unEx(), new CONST(frame.wordSize())),

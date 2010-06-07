@@ -7,9 +7,6 @@ import tiger.Mips.MipsFrame;
 import tiger.Quadruples.*;
 
 public class LivenessNode {
-	TExp key;
-	int number;
-	
 	public HashSet <tiger.Temp.Temp> use = new HashSet <tiger.Temp.Temp> ();
 	public HashSet <tiger.Temp.Temp> def = new HashSet <tiger.Temp.Temp> ();
 	public HashSet <tiger.Temp.Temp> in = new HashSet <tiger.Temp.Temp> ();
@@ -18,23 +15,16 @@ public class LivenessNode {
 	LinkedList <LivenessNode> succ = new LinkedList <LivenessNode>();
 	
 	public LivenessNode(TExp k, int n) {
-		key = k;
-		number = n;
 		if (k instanceof BinOp) {
 			use.add(((BinOp)k).left);
 			use.add(((BinOp)k).right);
 			def.add(((BinOp)k).dst);
-		}
-		else if (k instanceof BinOpI_L) {
-			use.add(((BinOpI_L)k).right);
-			def.add(((BinOpI_L)k).dst);
 		}
 		else if (k instanceof BinOpI_R) {
 			use.add(((BinOpI_R)k).left);
 			def.add(((BinOpI_R)k).dst);
 		}
 		else if (k instanceof Call) {
-			// TODO liveness Call
 			//define: v0, v1
 			def.add(MipsFrame.Reg[2]);
 			def.add(MipsFrame.Reg[3]);
@@ -48,17 +38,6 @@ public class LivenessNode {
 			def.add(MipsFrame.Reg[25]);
 			//define: ra
 			def.add(MipsFrame.Reg[31]);
-			/*
-			//use: a0-a3
-			for (int i = 0; i < 4; i++)
-				use.add(MipsFrame.Reg[4 + i]);
-			//use: sp
-			use.add(MipsFrame.Reg[29]);
-			//use: fp
-			use.add(MipsFrame.Reg[30]);
-			//use: ra
-			use.add(MipsFrame.Reg[31]);
-			 */
 		}
 		else if (k instanceof CJump) {
 			use.add(((CJump)k).left);
@@ -67,16 +46,10 @@ public class LivenessNode {
 		else if (k instanceof CJumpI) {
 			use.add(((CJumpI)k).left);
 		}
-		else if (k instanceof EnterFunc) {
-			// TODO liveness EnterFunc
-			/*
-			for (int i = 0; i <= 3; i++)
-				def.add(MipsFrame.Reg[i]);
-			for (int i = 26; i <= 31; i++)
-				def.add(MipsFrame.Reg[i]);
-			*/
-		}
 		else if (k instanceof Jump) {
+			
+		}
+		else if (k instanceof Label) {
 			
 		}
 		else if (k instanceof Load) {
@@ -94,38 +67,15 @@ public class LivenessNode {
 			def.add(((MoveLabel)k).dst);
 		}
 		else if (k instanceof ReturnSink) {
-			// TODO liveness ReturnSink
-			/*
-			//zero
-			use.add(MipsFrame.Reg[0]);
-			//at
-			use.add(MipsFrame.Reg[1]);
-			//rv
-			use.add(MipsFrame.Reg[2]);
-			//v1
-			use.add(MipsFrame.Reg[3]);
-			//kt
-			use.add(MipsFrame.Reg[26]);
-			use.add(MipsFrame.Reg[27]);
-			//gp
-			use.add(MipsFrame.Reg[28]);
-			//sp
-			use.add(MipsFrame.Reg[29]);
-			//fp
-			use.add(MipsFrame.Reg[30]);
-			*/
+			//ra
+			use.add(MipsFrame.Reg[31]);
 			//s0-s7
 			for (int i = 0; i < 8; i++)
 				use.add(MipsFrame.Reg[16 + i]);
-			//ra
-			use.add(MipsFrame.Reg[31]);
 		}
 		else if (k instanceof Store) {
 			use.add(((Store)k).mem);
 			use.add(((Store)k).src);
-		}
-		else if (k instanceof StoreI) {
-			use.add(((StoreI)k).mem);
 		}
 	}
 	

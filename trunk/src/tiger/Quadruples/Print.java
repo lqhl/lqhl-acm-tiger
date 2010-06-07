@@ -1,7 +1,7 @@
 package tiger.Quadruples;
 
 import java.io.PrintStream;
-import java.util.ArrayList;
+import java.util.LinkedList;
 
 import tiger.Temp.TempList;
 import tiger.Tree.BINOP;
@@ -9,7 +9,7 @@ import tiger.Tree.BINOP;
 public class Print {
 	PrintStream out;
 	public Print(PrintStream o) {out = o;}
-	public void print(ArrayList <TExp> instrList) {
+	public void print(LinkedList<TExp> instrList) {
 		for (TExp it : instrList)
 			print(it);
 	}
@@ -19,8 +19,6 @@ public class Print {
 			print((BinOp)exp);
 		else if (exp instanceof BinOpI_R)
 			print((BinOpI_R)exp);
-		else if (exp instanceof BinOpI_L)
-			print((BinOpI_L)exp);
 		else if (exp instanceof Call)
 			print((Call)exp);
 		else if (exp instanceof CJump)
@@ -43,8 +41,6 @@ public class Print {
 			print((ReturnSink)exp);
 		else if (exp instanceof Store)
 			print((Store)exp);
-		else if (exp instanceof StoreI)
-			print((StoreI)exp);
 	}
 	
 	void print(BinOp exp) {
@@ -60,18 +56,6 @@ public class Print {
 	}
 
 	void print(BinOpI_R exp) {
-		out.print("BinOp ");
-		switch (exp.oper) {
-			case BINOP.PLUS: out.print('+'); break;
-			case BINOP.MINUS: out.print('-'); break;
-			case BINOP.MUL: out.print('*'); break;
-			case BINOP.DIV: out.print('/'); break;
-		default: out.print(exp.oper);
-		}
-		out.println(' ' + exp.dst.toString() + ' ' + exp.left + ' ' + exp.right);
-	}
-	
-	void print(BinOpI_L exp) {
 		out.print("BinOp ");
 		switch (exp.oper) {
 			case BINOP.PLUS: out.print('+'); break;
@@ -130,9 +114,5 @@ public class Print {
 	
 	void print(Store exp) {
 		out.println("Store " + exp.src + ' ' + exp.mem + ' ' + exp.offset);
-	}
-	
-	void print(StoreI exp) {
-		out.println("StoreI " + exp.src + ' ' + exp.mem + ' ' + exp.offset);
 	}
 }

@@ -1,15 +1,13 @@
 package tiger.Quadruples;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-
+import java.util.LinkedList;
 import tiger.Frame.*;
 import tiger.Mips.*;
 import tiger.Temp.*;
 import tiger.Tree.*;
 
 public class Quadruples {
-	public ArrayList <TExp> instrList = new ArrayList <TExp> ();
+	public LinkedList <TExp> instrList = new LinkedList <TExp> ();
 	
 	MipsFrame frame;
 	
@@ -65,7 +63,7 @@ public class Quadruples {
 	}
 	
 	void transStm(LABEL stm) {
-		Label l = new Label(stm.label, instrList.size());
+		Label l = new Label(stm.label);
 		instrList.add(l);
 	}
 	
@@ -102,10 +100,7 @@ public class Quadruples {
 				mem = transExpr(((MEM)stm.dst).exp);
 				offset = 0;
 			}
-			if (stm.src instanceof CONST)
-				instrList.add(new StoreI(mem, offset, ((CONST)stm.src).value));
-			else
-				instrList.add(new Store(mem, offset, transExpr(stm.src)));
+			instrList.add(new Store(mem, offset, transExpr(stm.src)));
 		}
 	}
 	
@@ -131,8 +126,22 @@ public class Quadruples {
 		Temp res = new Temp();
 		if (expr.right instanceof CONST)
 			instrList.add(new BinOpI_R(expr.binop, res, transExpr(expr.left), ((CONST)expr.right).value));
-		else if (expr.left instanceof CONST)
-			instrList.add(new BinOpI_L(expr.binop, res, ((CONST)expr.left).value, transExpr(expr.right)));
+		else if (expr.left instanceof CONST) {
+			switch (expr.binop) {
+				case BINOP.PLUS:
+				case BINOP.MUL:
+					instrList.add(new BinOpI_R(expr.binop, res, transExpr(expr.right), ((CONST)expr.left).value));
+					break;
+				case BINOP.MINUS:
+					instrList.add(new BinOpI_R(expr.binop, res, transExpr(expr.right), ((CONST)expr.left).value));
+					instrList.add(new BinOp(expr.binop, res, MipsFrame.Reg[0], res));
+					break;
+				case BINOP.DIV:
+					// TODO divide
+					break;
+				default: throw new RuntimeException("Error at transExpr(BINOP) in Quadruples");
+			}
+		}
 		else
 			instrList.add(new BinOp(expr.binop, res, transExpr(expr.left), transExpr(expr.right)));
 		return res;
@@ -172,7 +181,6 @@ public class Quadruples {
 	}
 	
 	Temp transExpr(CALL expr) {
-		// TODO Call
 		Call cExp = new Call();
 		cExp.name = new Label(((NAME)expr.func).label);
 		TempList argList = null, ptr = null;
@@ -190,10 +198,6 @@ public class Quadruples {
 				tFrame = it;
 				break;
 			}
-		
-//		Temp[] newTemps = new Temp[4];
-//		for (int i = 0; i < 4; i++)
-//			instrList.add(new Move(newTemps[i] = new Temp(), frame.A(i)));
 		
 		if (tFrame == null) {
 			int count = 0;
@@ -214,8 +218,6 @@ public class Quadruples {
 					instrList.add(new Store(tFrame.SP(), ((InFrame)al.head).offset, ptr.head));
 		}
 		instrList.add(cExp);
-//		for (int i = 0; i < 4; i++)
-//			instrList.add(new Move(frame.A(i), newTemps[i]));
 		return frame.RV();
 	}
 }

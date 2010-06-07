@@ -7,7 +7,7 @@ import java.util.HashSet;
 import tiger.Quadruples.*;
 
 public class Liveness {
-	public LinkedList <LivenessNode> nodeList = new LinkedList<LivenessNode>();
+	public LinkedList <LivenessNode> nodeList;
 	public LinkedList <TExp> instrList;
 	
 	public Liveness(LinkedList<TExp> instrList) {
@@ -17,29 +17,22 @@ public class Liveness {
 	public void livenessAnalysis() {
 		buildNodeList();
 		
-		HashMap <tiger.Temp.Label, Integer> labelMap = new HashMap <tiger.Temp.Label, Integer>();
+		HashMap <tiger.Temp.Label, LivenessNode> label2Node = new HashMap <tiger.Temp.Label, LivenessNode>();
 		for (int i = 0; i < instrList.size(); i++)
 			if (instrList.get(i) instanceof Label)
-				labelMap.put(((Label)instrList.get(i)).label, i);
-		for (int i = 0; i < instrList.size(); i++)
-			if (instrList.get(i) instanceof CJump)
-				((CJump)instrList.get(i)).label.number = labelMap.get(((CJump)instrList.get(i)).label.label);
-			else if (instrList.get(i) instanceof CJumpI)
-				((CJumpI)instrList.get(i)).label.number = labelMap.get(((CJumpI)instrList.get(i)).label.label);
-			else if (instrList.get(i) instanceof Jump)
-				((Jump)instrList.get(i)).label.number = labelMap.get(((Jump)instrList.get(i)).label.label);
+				label2Node.put(((Label)instrList.get(i)).label, nodeList.get(i));
 		
 		for (int i = 0; i < instrList.size(); i++) {
-			if (instrList.get(i) instanceof Label) continue;
 			if (instrList.get(i) instanceof Jump) {
-				instrList.get(i).node.addEdge(findNext(((Jump)instrList.get(i)).label.number));
+				instrList.get(i).node.addEdge(label2Node.get(((Jump)instrList.get(i)).label.label));
 			}
 			else {
-				instrList.get(i).node.addEdge(findNext(i));
+				if (i + 1 != instrList.size())
+					instrList.get(i).node.addEdge(nodeList.get(i + 1));
 				if (instrList.get(i) instanceof CJump)
-					instrList.get(i).node.addEdge(findNext(((CJump)instrList.get(i)).label.number));
+					instrList.get(i).node.addEdge(label2Node.get(((CJump)instrList.get(i)).label.label));
 				else if (instrList.get(i) instanceof CJumpI)
-					instrList.get(i).node.addEdge(findNext(((CJumpI)instrList.get(i)).label.number));
+					instrList.get(i).node.addEdge(label2Node.get(((CJumpI)instrList.get(i)).label.label));
 			}
 		}
 		
@@ -66,14 +59,6 @@ public class Liveness {
 		} while (flag);
 	}
 
-	private LivenessNode findNext(int number) {
-		for (int i = number + 1; i < instrList.size(); i++) {
-			if (! (instrList.get(i) instanceof Label))
-				return instrList.get(i).node;
-		}
-		return null;
-	}
-	
 	public void print(PrintStream out) {
 		for (int i = 0; i < nodeList.size(); i++) {
 			out.println("node " + i);
@@ -97,6 +82,7 @@ public class Liveness {
 	}
 
 	public void buildNodeList() {
+		nodeList = new LinkedList<LivenessNode>();
 		for (int i = 0; i < instrList.size(); i++) {
 			LivenessNode n = new LivenessNode(instrList.get(i), i);
 			instrList.get(i).node = n;

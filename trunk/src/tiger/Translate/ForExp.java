@@ -28,6 +28,7 @@ public class ForExp extends Exp {
 	}
 
 	Stm unNx() {
+		/*
 		Access limit = home.allocLocal(true);
 		Label begin = new Label();
 		Label goon = new Label();
@@ -41,5 +42,18 @@ public class ForExp extends Exp {
 				new SEQ(new MOVE(var.access.exp(new TEMP(home.frame.FP())), new BINOP(BINOP.PLUS, var.access.exp(new TEMP(home.frame.FP())), new CONST(1))),
 				new SEQ(new JUMP(begin),
 				new LABEL(done))))))))));
+		//*/
+		//*
+		Access limit = home.allocLocal(true);
+		Label begin = new Label();
+		return new SEQ(new MOVE(var.access.exp(new TEMP(home.frame.FP())), low.unEx()),
+				new SEQ(new MOVE(limit.access.exp(new TEMP(home.frame.FP())), high.unEx()),
+				new SEQ(new CJUMP(CJUMP.LE, var.access.exp(new TEMP(home.frame.FP())), limit.access.exp(new TEMP(home.frame.FP())), begin, done),
+				new SEQ(new LABEL(begin),
+				new SEQ(body.unNx(),
+				new SEQ(new MOVE(var.access.exp(new TEMP(home.frame.FP())), new BINOP(BINOP.PLUS, var.access.exp(new TEMP(home.frame.FP())), new CONST(1))),
+				new SEQ(new CJUMP(CJUMP.LE, var.access.exp(new TEMP(home.frame.FP())), limit.access.exp(new TEMP(home.frame.FP())), begin, done),
+				new LABEL(done))))))));
+		//*/
 	}
 }
