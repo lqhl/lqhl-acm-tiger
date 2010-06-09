@@ -1,20 +1,14 @@
 package tiger.Liveness;
 
 import java.util.HashSet;
-import java.util.LinkedList;
-
 import tiger.Mips.MipsFrame;
 import tiger.Quadruples.*;
 
 public class LivenessNode {
 	public HashSet <tiger.Temp.Temp> use = new HashSet <tiger.Temp.Temp> ();
 	public HashSet <tiger.Temp.Temp> def = new HashSet <tiger.Temp.Temp> ();
-	public HashSet <tiger.Temp.Temp> in = new HashSet <tiger.Temp.Temp> ();
-	public HashSet <tiger.Temp.Temp> out = new HashSet <tiger.Temp.Temp> ();
-	LinkedList <LivenessNode> pred = new LinkedList <LivenessNode>();
-	LinkedList <LivenessNode> succ = new LinkedList <LivenessNode>();
 	
-	public LivenessNode(TExp k, int n) {
+	public LivenessNode(TExp k) {
 		if (k instanceof BinOp) {
 			use.add(((BinOp)k).left);
 			use.add(((BinOp)k).right);
@@ -67,6 +61,10 @@ public class LivenessNode {
 			def.add(((MoveLabel)k).dst);
 		}
 		else if (k instanceof ReturnSink) {
+			//sp
+			use.add(MipsFrame.Reg[29]);
+			//fp
+			use.add(MipsFrame.Reg[30]);
 			//ra
 			use.add(MipsFrame.Reg[31]);
 			//s0-s7
@@ -77,11 +75,5 @@ public class LivenessNode {
 			use.add(((Store)k).mem);
 			use.add(((Store)k).src);
 		}
-	}
-	
-	void addEdge(LivenessNode target) {
-		if (target == null) return;
-		succ.add(target);
-		target.pred.add(this);
 	}
 }
