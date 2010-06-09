@@ -1,6 +1,5 @@
 package tiger.Translate;
 
-import tiger.Symbol.*;
 import tiger.Temp.*;
 import tiger.Util.*;
 

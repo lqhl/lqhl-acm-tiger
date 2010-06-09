@@ -87,7 +87,7 @@ public class FindEscape {
 		}
 	}
 
-	public FindEscape(Exp e) {
+	public void findEscape(Exp e) {
 		traverseExp(0, e);
 	}
 }

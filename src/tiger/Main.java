@@ -1,9 +1,12 @@
 package tiger;
 
 import java.io.*;
+import java.util.LinkedList;
 import tiger.Absyn.*;
+import tiger.Analysis.BasicBlock;
 import tiger.Mips.MipsFrame;
 import tiger.Parser.*;
+import tiger.Quadruples.TExp;
 import tiger.Semant.*;
 import tiger.Translate.Frag;
 import tiger.Translate.DataFrag;
@@ -33,7 +36,8 @@ public class Main {
 			
 			Exp result = (Exp)p.parse().value;
 
-			FindEscape findEscape = new FindEscape(result);
+			FindEscape findEscape = new FindEscape();
+			findEscape.findEscape(result);
 			
 			tiger.Mips.MipsFrame mipsFrame = new tiger.Mips.MipsFrame();
 			Semant semant = new Semant(mipsFrame);
@@ -46,7 +50,7 @@ public class Main {
 			for (Frag it = frags; it != null; it = it.next, count++) {
 				outThreeAddr.println("-----------Frag " + count + "-------------");
 				outIR.println("-----------Frag " + count + "-------------");
-				outAssem.println("###############Frag " + count + "################");
+				outAssem.println("###############Frag " + count + " ################");
 				if (it instanceof ProcFrag)
 					emitProc(outIR, outThreeAddr, outLiveness, outAssem, (ProcFrag)it);
 				else {
@@ -95,11 +99,15 @@ public class Main {
 		printTA.print(threeAddr.instrList);
 		threeAddr.instrList = ((MipsFrame)f.frame).procEntryExit2(threeAddr.instrList);
 		//liveness & register allocate
-		tiger.RegAlloc.RegAlloc regAlloc = new tiger.RegAlloc.RegAlloc((MipsFrame)f.frame, threeAddr.instrList, f.frame.registers());
+		tiger.Analysis.BuildBlocks buildBlocks = new tiger.Analysis.BuildBlocks(threeAddr.instrList);
+		tiger.RegAlloc.RegAlloc regAlloc = new tiger.RegAlloc.RegAlloc((MipsFrame)f.frame, buildBlocks.blocks, f.frame.registers());
 		regAlloc.main();
 		//regAlloc.print(outThreeAddr);
-		regAlloc.instrList = ((MipsFrame)f.frame).procEntryExit3(regAlloc.instrList);
-		tiger.Codegen.Codegen codegen = new tiger.Codegen.Codegen(regAlloc.instrList, regAlloc.temp2Node, (MipsFrame)f.frame);
+		LinkedList<TExp> instrList = new LinkedList<TExp> ();
+		for (BasicBlock blk : regAlloc.blocks)
+			instrList.addAll(blk.list);
+		instrList = ((MipsFrame)f.frame).procEntryExit3(instrList);
+		tiger.Codegen.Codegen codegen = new tiger.Codegen.Codegen(instrList, regAlloc.temp2Node, (MipsFrame)f.frame);
 		codegen.codegen(outAssem);
 	}
 	

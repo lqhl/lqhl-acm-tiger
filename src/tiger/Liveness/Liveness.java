@@ -1,92 +1,49 @@
 package tiger.Liveness;
 
-import java.io.PrintStream;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.HashSet;
 import tiger.Quadruples.*;
+import tiger.Temp.Temp;
+import tiger.Analysis.*;
 
 public class Liveness {
-	public LinkedList <LivenessNode> nodeList;
-	public LinkedList <TExp> instrList;
+	public LinkedList<BasicBlock> blocks;
 	
-	public Liveness(LinkedList<TExp> instrList) {
-		this.instrList = instrList;
+	public Liveness(LinkedList<BasicBlock> blk) {
+		blocks = blk;
+		for (BasicBlock b : blocks) {
+			HashSet<Temp> tmp = new HashSet<Temp> ();
+			for (TExp n : b.list) {
+				n.node = new LivenessNode(n);
+				tmp.clear();
+				tmp.addAll(n.node.use);
+				tmp.removeAll(b.live_kill);
+				b.live_gen.addAll(tmp);
+				b.live_kill.addAll(n.node.def);
+			}
+		}
 	}
 	
 	public void livenessAnalysis() {
-		buildNodeList();
-		
-		HashMap <tiger.Temp.Label, LivenessNode> label2Node = new HashMap <tiger.Temp.Label, LivenessNode>();
-		for (int i = 0; i < instrList.size(); i++)
-			if (instrList.get(i) instanceof Label)
-				label2Node.put(((Label)instrList.get(i)).label, nodeList.get(i));
-		
-		for (int i = 0; i < instrList.size(); i++) {
-			if (instrList.get(i) instanceof Jump) {
-				instrList.get(i).node.addEdge(label2Node.get(((Jump)instrList.get(i)).label.label));
-			}
-			else {
-				if (i + 1 != instrList.size())
-					instrList.get(i).node.addEdge(nodeList.get(i + 1));
-				if (instrList.get(i) instanceof CJump)
-					instrList.get(i).node.addEdge(label2Node.get(((CJump)instrList.get(i)).label.label));
-				else if (instrList.get(i) instanceof CJumpI)
-					instrList.get(i).node.addEdge(label2Node.get(((CJumpI)instrList.get(i)).label.label));
-			}
-		}
-		
 		boolean flag;
 		do {
 			flag = false;
-			for (int i = nodeList.size() - 1; i >= 0; i--) {
-				LivenessNode n = nodeList.get(i);
-				HashSet <tiger.Temp.Temp> inTmp = new HashSet <tiger.Temp.Temp> (n.in);
-				HashSet <tiger.Temp.Temp> outTmp = new HashSet <tiger.Temp.Temp> (n.out);
+			for (int i = blocks.size() - 1; i >= 0; i--) {
+				BasicBlock b = blocks.get(i);
+				HashSet <tiger.Temp.Temp> inTmp = new HashSet <tiger.Temp.Temp> (b.live_in);
+				HashSet <tiger.Temp.Temp> outTmp = new HashSet <tiger.Temp.Temp> (b.live_out);
 				
-				n.out = new HashSet <tiger.Temp.Temp>();
-				for (int j = 0; j < n.succ.size(); j++) {
-					n.out.addAll(n.succ.get(j).in);
-				}
+				b.live_out = new HashSet <tiger.Temp.Temp>();
+				for (BasicBlock s : b.succ)
+					b.live_out.addAll(s.live_in);
 
-				n.in = new HashSet <tiger.Temp.Temp> (n.out);
-				n.in.removeAll(n.def);
-				n.in.addAll(n.use);
+				b.live_in = new HashSet <tiger.Temp.Temp> (b.live_out);
+				b.live_in.removeAll(b.live_kill);
+				b.live_in.addAll(b.live_gen);
 				
-				if (!n.in.equals(inTmp) || !n.out.equals(outTmp))
+				if (!b.live_in.equals(inTmp) || !b.live_out.equals(outTmp))
 					flag = true;
 			}
 		} while (flag);
-	}
-
-	public void print(PrintStream out) {
-		for (int i = 0; i < nodeList.size(); i++) {
-			out.println("node " + i);
-			out.print("use:");
-			for (tiger.Temp.Temp it : nodeList.get(i).use)
-				out.print(" " + it);
-			out.println();
-			out.print("def:");
-			for (tiger.Temp.Temp it : nodeList.get(i).def)
-				out.print(" " + it);
-			out.println();
-			out.print("in:");
-			for (tiger.Temp.Temp it : nodeList.get(i).in)
-				out.print(" " + it);
-			out.println();
-			out.print("out:");
-			for (tiger.Temp.Temp it : nodeList.get(i).out)
-				out.print(" " + it);
-			out.println();
-		}
-	}
-
-	public void buildNodeList() {
-		nodeList = new LinkedList<LivenessNode>();
-		for (int i = 0; i < instrList.size(); i++) {
-			LivenessNode n = new LivenessNode(instrList.get(i), i);
-			instrList.get(i).node = n;
-			nodeList.add(n);
-		}
 	}
 }
