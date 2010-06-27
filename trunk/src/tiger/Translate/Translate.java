@@ -24,7 +24,7 @@ public class Translate {
 	}
 
 	public Exp transIntExp(int value) {
-		return new Ex(new CONST(value));
+		return new IntExp(value);
 	}
 	
 	public Exp transNilExp() {
@@ -55,6 +55,8 @@ public class Translate {
 	}
 	
 	public Exp transAssignExp(Exp lvalue, Exp e) {
+		if (lvalue == null)
+			return null;
 		return new Nx(new MOVE(lvalue.unEx(), e.unEx()));
 	}
 	
@@ -68,7 +70,8 @@ public class Translate {
 			static_link = l.staticLink().access.exp(static_link);
 			l = l.parent;
 		}
-		args = new tiger.Tree.ExpList(static_link, args);
+		if (!name.name.startsWith("_"))
+			args = new tiger.Tree.ExpList(static_link, args);
 		return new Ex(new CALL(new NAME(name), args));
 	}
 	

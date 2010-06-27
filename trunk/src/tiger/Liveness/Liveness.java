@@ -4,7 +4,7 @@ import java.util.LinkedList;
 import java.util.HashSet;
 import tiger.Quadruples.*;
 import tiger.Temp.Temp;
-import tiger.Analysis.*;
+import tiger.Blocks.*;
 
 public class Liveness {
 	public LinkedList<BasicBlock> blocks;
@@ -14,12 +14,12 @@ public class Liveness {
 		for (BasicBlock b : blocks) {
 			HashSet<Temp> tmp = new HashSet<Temp> ();
 			for (TExp n : b.list) {
-				n.node = new LivenessNode(n);
+				n.livenessNode = new LivenessNode(n);
 				tmp.clear();
-				tmp.addAll(n.node.use);
+				tmp.addAll(n.livenessNode.use);
 				tmp.removeAll(b.live_kill);
 				b.live_gen.addAll(tmp);
-				b.live_kill.addAll(n.node.def);
+				b.live_kill.addAll(n.livenessNode.def);
 			}
 		}
 	}

@@ -11,6 +11,8 @@ public class FindEscape {
 			return;
 		else if (v instanceof SimpleVar) {
 			Escape escape = (Escape) (escEnv.get(((SimpleVar) v).name));
+			if (escape == null)
+				System.out.println(((SimpleVar) v).name);
 			if (escape.depth < depth)
 				escape.setEscape();
 		}
@@ -80,6 +82,7 @@ public class FindEscape {
 		}
 		else if (d instanceof FunctionDec) {
 			for (FunctionDec fd = (FunctionDec) d; fd != null; fd = fd.next) {
+				if (fd.inline) continue;
 				for (FieldList fl = (fd).params; fl != null; fl = fl.tail)
 					escEnv.put((fl).name, new FormalEscape(depth + 1, fl));
 				traverseExp(depth + 1, (fd).body);

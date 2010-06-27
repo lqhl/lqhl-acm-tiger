@@ -27,9 +27,9 @@ public class Codegen {
 		for (TExp e : instrList)
 			print(e);
 		if (frame.name.name != "main")
-			out.println("jr " + "$ra");
+			out.println("	jr " + "$ra");
 		else
-			out.println("j " + "_exit");
+			out.println("	j " + "_exit");
 	}
 	
 	private String getColor(Temp t) {
@@ -73,6 +73,7 @@ public class Codegen {
 	}
 	
 	void print(BinOp exp) {
+		out.print('\t');
 		switch (exp.oper) {
 			case BINOP.PLUS: out.print("add"); break;
 			case BINOP.MINUS: out.print("sub"); break;
@@ -84,22 +85,56 @@ public class Codegen {
 	}
 
 	void print(BinOpI_R exp) {
+		out.print('\t');
 		switch (exp.oper) {
-			case BINOP.PLUS: out.print("add"); break;
-			case BINOP.MINUS: out.print("sub"); break;
-			case BINOP.MUL: out.print("mul"); break;
-			case BINOP.DIV: out.print("div"); break;
+			case BINOP.PLUS:
+				out.print("add");
+				out.println(' ' + getColor(exp.dst) + ", " + getColor(exp.left) + ", " + exp.right);
+				break;
+			case BINOP.MINUS:
+				out.print("sub");
+				out.println(' ' + getColor(exp.dst) + ", " + getColor(exp.left) + ", " + exp.right);
+				break;
+			case BINOP.MUL:
+				if ((exp.right & (exp.right - 1)) == 0) {
+					out.print("sll");
+					out.println(' ' + getColor(exp.dst) + ", " + getColor(exp.left) + ", " + log2(exp.right));
+				}
+				else {
+					out.print("mul");
+					out.println(' ' + getColor(exp.dst) + ", " + getColor(exp.left) + ", " + exp.right);
+				}
+				break;
+			case BINOP.DIV:
+				if ((exp.right & (exp.right - 1)) == 0) {
+					out.print("sra");
+					out.println(' ' + getColor(exp.dst) + ", " + getColor(exp.left) + ", " + log2(exp.right));
+				}
+				else {
+					out.print("div");
+					out.println(' ' + getColor(exp.dst) + ", " + getColor(exp.left) + ", " + exp.right);
+				}
+				break;
 			default: throw new RuntimeException("Error at BinOpI_R in Codegen");
 		}
-		out.println(' ' + getColor(exp.dst) + ", " + getColor(exp.left) + ", " + exp.right);
+	}
+	
+	private int log2(int right) {
+		int res = 0;
+		while (1 << res < right)
+			res++;
+		return res;
 	}
 	
 	void print(Call exp) {
+		out.print('\t');
 		out.println("jal " + exp.name.label);
+		out.print('\t');
 		out.println("add $fp, $sp, " + -frame.offset);
 	}
 	
 	void print(CJump exp) {
+		out.print('\t');
 		switch (exp.relop) {
 			case CJUMP.EQ: out.print("beq"); break;
 			case CJUMP.NE: out.print("bne"); break;
@@ -113,6 +148,7 @@ public class Codegen {
 	}
 	
 	void print(CJumpI exp) {
+		out.print('\t');
 		switch (exp.relop) {
 			case CJUMP.EQ: out.print("beq"); break;
 			case CJUMP.NE: out.print("bne"); break;
@@ -126,6 +162,7 @@ public class Codegen {
 	}
 	
 	void print(Jump exp) {
+		out.print('\t');
 		out.println("j " + exp.label.label);
 	}
 	
@@ -134,19 +171,24 @@ public class Codegen {
 	}
 	
 	void print(Load exp) {
+		out.print('\t');
 		out.println("lw " + getColor(exp.dst) + ", " + exp.offset + '(' + getColor(exp.mem) + ')');
 	}
 	
 	void print(Move exp) {
-		if (!getColor(exp.dst).equals(getColor(exp.src)))
+		if (!getColor(exp.dst).equals(getColor(exp.src))) {
+			out.print('\t');
 			out.println("move " + getColor(exp.dst) + ", " + getColor(exp.src));
+		}
 	}
 	
 	void print(MoveI exp) {
+		out.print('\t');
 		out.println("li " + getColor(exp.dst) + ", " + exp.src);
 	}
 	
 	void print(MoveLabel exp) {
+		out.print('\t');
 		out.println("la " + getColor(exp.dst) + ", " + exp.srcLabel.label);
 	}
 
@@ -155,6 +197,7 @@ public class Codegen {
 	}
 	
 	void print(Store exp) {
+		out.print('\t');
 		out.println("sw " + getColor(exp.src) + ", " + exp.offset + '(' + getColor(exp.mem) + ')');
 	}
 }

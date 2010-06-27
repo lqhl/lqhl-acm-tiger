@@ -137,7 +137,7 @@ public class Quadruples {
 					instrList.add(new BinOp(expr.binop, res, MipsFrame.Reg[0], res));
 					break;
 				case BINOP.DIV:
-					// TODO divide
+					instrList.add(new BinOp(expr.binop, res, transExpr(expr.right), transExpr(expr.left)));
 					break;
 				default: throw new RuntimeException("Error at transExpr(BINOP) in Quadruples");
 			}
@@ -148,6 +148,8 @@ public class Quadruples {
 	}
 	
 	Temp transExpr(CONST expr) {
+		if (expr.value == 0)
+			return MipsFrame.Reg[0];
 		Temp res = new Temp();
 		instrList.add(new MoveI(res, expr.value));
 		return res;

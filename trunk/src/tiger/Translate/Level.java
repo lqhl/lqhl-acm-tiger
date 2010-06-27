@@ -24,6 +24,18 @@ public class Level {
 				ptr = ptr.tail = new AccessList(new Access(this, al.head), null);
 	}
 	
+	public Level(Level p, Label n, BoolList f, boolean stdFunc) {
+		parent = p;
+		frame = p.frame.newFrame(n, f);
+		formals = null;
+		AccessList ptr = null;
+		for(tiger.Frame.AccessList al = frame.formals; al !=null; al = al.tail)
+			if (formals == null)
+				ptr = formals = new AccessList(new Access(this, al.head), null);
+			else
+				ptr = ptr.tail = new AccessList(new Access(this, al.head), null);
+	}
+	
 	public Level (tiger.Frame.Frame f) {
 		frame = f;
 	}
