@@ -3,18 +3,20 @@ package tiger.Quadruples;
 import java.io.PrintStream;
 import java.util.LinkedList;
 
+import tiger.Blocks.BasicBlock;
 import tiger.Temp.TempList;
 import tiger.Tree.BINOP;
 
 public class Print {
 	PrintStream out;
 	public Print(PrintStream o) {out = o;}
-	public void print(LinkedList<TExp> instrList) {
-		for (TExp it : instrList)
-			print(it);
+	public void print(LinkedList<BasicBlock> blocks) {
+		for (BasicBlock b : blocks)
+			for (TExp it : b.list)
+				print(it);
 	}
 	
-	void print(TExp exp) {
+	public void print(TExp exp) {
 		if (exp instanceof BinOp)
 			print((BinOp)exp);
 		else if (exp instanceof BinOpI_R)

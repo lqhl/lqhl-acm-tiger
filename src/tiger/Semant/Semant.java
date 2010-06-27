@@ -22,7 +22,7 @@ public class Semant {
 
 	public Semant(Frame frame) {
 		translate = new Translate(frame);
-		level = new Level(translate.frame);
+		level = new Level(frame);
 		env = new Env(level);
 	}
 
@@ -194,7 +194,7 @@ public class Semant {
 		ExpTy eInit = transExp(e.init);
 		checkAssign(((ARRAY)eType).element.actual(), eInit.ty, e.line, e.colume);
 		
-		if (eInit.ty.actual() instanceof ARRAY) {
+		if (!eInit.ty.actual().coerceTo(INT)) {
 			return new ExpTy(translate.transMultiArrayExp(level, eInit.exp, arraySize.exp), eType);
 		}
 		else
@@ -328,7 +328,6 @@ public class Semant {
 		return new ExpTy(translate.transNilExp(), NIL);
 	}
 	
-
 	Type checkEqualType(ExpTy et1, ExpTy et2, int line, int colume) {
 		if (et1.ty.coerceTo(et2.ty)
 			&& (et1.ty.coerceTo(INT) || et1.ty.coerceTo(STRING) 
@@ -514,7 +513,8 @@ public class Semant {
 	static int count = 0;
 	Exp transDec(tiger.Absyn.FunctionDec d) {
 		List<tiger.Symbol.Symbol> list = new ArrayList <tiger.Symbol.Symbol> ();
-		for (tiger.Absyn.FunctionDec it = d; it != null; it = it.next)
+		for (tiger.Absyn.FunctionDec it = d; it != null; it = it.next) {
+			if (it.inline) continue;
 			if (env.vEnv.get(it.name) != null && env.vEnv.get(it.name) instanceof StdFunEntry)
 				report_error(it.line, it.colume, "This funtion has been defined in standard library");
 			else if (list.contains(it.name))
@@ -522,12 +522,14 @@ public class Semant {
 			else {
 				list.add(it.name);
 				Type result = (it.result == null) ? VOID : transTy(it.result).actual();
-				Label label = new Label(it.name + "_" + count);
+				Label label = new Label("P" + count + "_" + it.name);
 				count++;
 				Level new_level = new Level(level, label, makeBoolList(it.params));
 				env.vEnv.put(it.name, new FunEntry(new_level, label, transTypeFields(it.params), result));
 			}
+		}
 		for (tiger.Absyn.FunctionDec it = d; it != null; it = it.next) {
+			if (it.inline) continue;
 			FunEntry f = (FunEntry)env.vEnv.get(it.name);
 			env.vEnv.beginScope();
 			env.loopEnv.beginScope();

@@ -13,8 +13,15 @@ public class IfThenElseExp extends Exp {
 		e_else = e2;
 	}
 
-	Stm unCx(Label t, Label f) {
-		return new CJUMP(CJUMP.NE, unEx(), new CONST(0), t, f);
+	Stm unCx(Label tt, Label ff) {
+		//return new CJUMP(CJUMP.NE, unEx(), new CONST(0), t, f);
+		Label t = new Label();
+		Label f = new Label();
+		return new SEQ(test.unCx(t, f),
+						new SEQ(new LABEL(t),
+						new SEQ(e_then.unCx(tt, ff),
+						new SEQ(new LABEL(f),
+						e_else.unCx(tt, ff)))));
 	}
 
 	Expr unEx() {

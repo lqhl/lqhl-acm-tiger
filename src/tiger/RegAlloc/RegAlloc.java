@@ -8,7 +8,7 @@ import java.util.Hashtable;
 import java.util.Set;
 import java.util.Stack;
 import tiger.Mips.*;
-import tiger.Analysis.BasicBlock;
+import tiger.Blocks.BasicBlock;
 import tiger.Liveness.*;
 import tiger.Quadruples.*;
 import tiger.Temp.Temp;
@@ -101,15 +101,15 @@ public class RegAlloc {
 			for (BasicBlock b : blocks)
 				for (int i = 0; i < b.list.size(); i++) {
 					TExp inst = b.list.get(i);
-					if (inst.node == null) continue;
-					if (inst.node.use.contains(v.temp)) {
+					if (inst.livenessNode == null) continue;
+					if (inst.livenessNode.use.contains(v.temp)) {
 						Temp p = new Temp();
 						newTemps.add(t2N(p));
 						t2N(p).isNew = true;
 						b.list.add(i, new Load(frame.FP(), a.offset, p));
 						b.list.get(++i).replaceUse(v.temp, p);
 					}
-					if (inst.node.def.contains(v.temp)) {
+					if (inst.livenessNode.def.contains(v.temp)) {
 						Temp p = new Temp();
 						newTemps.add(t2N(p));
 						t2N(p).isNew = true;
@@ -130,7 +130,9 @@ public class RegAlloc {
 		while (!selectStack.isEmpty()) {
 			Node n = selectStack.pop();
 			LinkedList <Integer> okColors = new LinkedList <Integer> ();
-			for (int i = 2; i <= 25; i++)
+			for (int i = 8; i <= 25; i++)
+				okColors.add(i);
+			for (int i = 2; i <= 7; i++)
 				okColors.add(i);
 			for (int i = 28; i <= 31; i++)
 				okColors.add(i);
@@ -143,7 +145,7 @@ public class RegAlloc {
 				spilledNodes.add(n);
 			else {
 				coloredNodes.add(n);
-				Integer c = okColors.get(0);
+				Integer c = okColors.peek();
 				n.color = c;
 			}
 		}
@@ -356,19 +358,19 @@ public class RegAlloc {
 			for (int i = b.list.size() - 1; i >= 0; i--) {
 				TExp inst = b.list.get(i);
 				if (inst instanceof Move) {
-					live.removeAll(inst.node.use);
-					HashSet <Temp> nodes = new HashSet<Temp>(inst.node.def);
-					nodes.addAll(inst.node.use);
+					live.removeAll(inst.livenessNode.use);
+					HashSet <Temp> nodes = new HashSet<Temp>(inst.livenessNode.def);
+					nodes.addAll(inst.livenessNode.use);
 					for (Temp n : nodes)
 						t2N(n).moveList.add((Move)inst);
 					worklistMoves.add((Move)inst);
 				}
-				live.addAll(inst.node.def);
-				for (Temp d : inst.node.def)
+				live.addAll(inst.livenessNode.def);
+				for (Temp d : inst.livenessNode.def)
 					for (Temp l : live)
 						addEdge(l, d);
-				live.removeAll(inst.node.def);
-				live.addAll(inst.node.use);
+				live.removeAll(inst.livenessNode.def);
+				live.addAll(inst.livenessNode.use);
 			}
 		}
 	}

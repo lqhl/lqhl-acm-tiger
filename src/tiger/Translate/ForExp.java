@@ -44,7 +44,7 @@ public class ForExp extends Exp {
 				new LABEL(done))))))))));
 		//*/
 		//*
-		Access limit = home.allocLocal(true);
+		Access limit = home.allocLocal(false);
 		Label begin = new Label();
 		return new SEQ(new MOVE(var.access.exp(new TEMP(home.frame.FP())), low.unEx()),
 				new SEQ(new MOVE(limit.access.exp(new TEMP(home.frame.FP())), high.unEx()),

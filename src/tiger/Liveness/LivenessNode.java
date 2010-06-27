@@ -19,6 +19,9 @@ public class LivenessNode {
 			def.add(((BinOpI_R)k).dst);
 		}
 		else if (k instanceof Call) {
+			//use: a0-a3
+			for (int i = 0; i < 4; i++)
+				use.add(MipsFrame.Reg[4 + i]);
 			//define: v0, v1
 			def.add(MipsFrame.Reg[2]);
 			def.add(MipsFrame.Reg[3]);
@@ -32,6 +35,8 @@ public class LivenessNode {
 			def.add(MipsFrame.Reg[25]);
 			//define: ra
 			def.add(MipsFrame.Reg[31]);
+			//define: gp
+			def.add(MipsFrame.Reg[28]);
 		}
 		else if (k instanceof CJump) {
 			use.add(((CJump)k).left);
@@ -61,6 +66,8 @@ public class LivenessNode {
 			def.add(((MoveLabel)k).dst);
 		}
 		else if (k instanceof ReturnSink) {
+			//v0
+			use.add(MipsFrame.Reg[2]);
 			//sp
 			use.add(MipsFrame.Reg[29]);
 			//fp
